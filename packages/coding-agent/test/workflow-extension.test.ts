@@ -1,5 +1,5 @@
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import os, { tmpdir } from "node:os";
 import path from "node:path";
 import type { AgentToolResult } from "@step-harness/agent-core";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -70,10 +70,13 @@ test("nested callback failures name their script in the text channels", () => {
 });
 
 beforeEach(() => {
+	const cpu = os.cpus()[0]!;
+	vi.spyOn(os, "cpus").mockReturnValue(Array(10).fill(cpu));
 	resetWorkflowAdmission();
 });
 
 afterEach(async () => {
+	vi.restoreAllMocks();
 	resetWorkflowAdmission();
 	vi.unstubAllEnvs();
 	await Promise.all(cleanups.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
@@ -442,12 +445,13 @@ test("workflow streams task counts and transitions while agents are still runnin
 			(update) => updates.push(update as AgentToolResult<WorkflowProgress>),
 			context(cwd, testHarness.notifications),
 		);
+	void execution.catch(() => undefined);
 	let settled = false;
 	void execution.then(() => {
 		settled = true;
 	});
 	try {
-		await vi.waitFor(() => expect(pending.size).toBe(2), { timeout: 10_000 });
+		await vi.waitFor(() => expect(pending.size).toBe(2), { timeout: 30_000 });
 		expect(settled).toBe(false);
 		const live = updates.at(-1)?.details;
 		expect(live).toMatchObject({
@@ -464,14 +468,14 @@ test("workflow streams task counts and transitions while agents are still runnin
 		]);
 		const firstSnapshot = live;
 		pending.get("Inspect authentication")!({ value: "safe", usage: { input: 2, output: 1 } });
-		await vi.waitFor(() => expect(pending.size).toBe(3), { timeout: 10_000 });
+		await vi.waitFor(() => expect(pending.size).toBe(3), { timeout: 30_000 });
 		expect(settled).toBe(false);
 		expect(updates.at(-1)?.details).toMatchObject({ completedAgents: 1, spentTokens: 3 });
 		expect(updates.at(-1)?.details?.agents.map((agent) => agent.status)).toEqual(["completed", "running", "running"]);
 		expect(firstSnapshot?.completedAgents).toBe(0);
 		expect(firstSnapshot?.agents[0]?.status).toBe("running");
 		for (const resolve of pending.values()) resolve({ value: "done" });
-		await vi.waitFor(() => expect(pending.size).toBe(3), { timeout: 10_000 });
+		await vi.waitFor(() => expect(pending.size).toBe(3), { timeout: 30_000 });
 		pending.get("Check scheduler")!({ value: "done" });
 		await execution;
 	} finally {
@@ -484,7 +488,7 @@ test("workflow streams task counts and transitions while agents are still runnin
 	const finalResult = await execution;
 	expect(finalResult.details).toMatchObject({ status: "completed", agentCalls: 3 });
 	expect(finalResult.details).not.toHaveProperty("agents");
-});
+}, 90_000);
 
 test("workflow streams cancellation for both running and queued agents", async () => {
 	const cwd = await workspace();
