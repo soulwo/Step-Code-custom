@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { closeSync, fsyncSync, openSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, fchmodSync, fsyncSync, openSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 export interface AtomicWriteOptions {
@@ -15,14 +15,17 @@ export function atomicWriteFileWithSync(
 ): void {
 	const temporary = join(dirname(path), `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`);
 	let mode = options.mode ?? 0o600;
+	let preserveMode = false;
 	try {
 		mode = statSync(path).mode & 0o777;
+		preserveMode = true;
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 	}
 	let descriptor: number | undefined;
 	try {
 		descriptor = openSync(temporary, "wx", mode);
+		if (preserveMode) fchmodSync(descriptor, mode);
 		write(descriptor);
 		fsyncSync(descriptor);
 		closeSync(descriptor);
