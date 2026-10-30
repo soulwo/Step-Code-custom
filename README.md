@@ -42,6 +42,7 @@ The terminal illustration uses selected output from the real `step --help` comma
 - **Complete coding loop** — inspect a repository, edit files, execute tools, and verify changes in an interactive TUI or with `step -p` for automation.
 - **Step provider integration** — sign in with a Step Plan account or use a Step Platform API key, then select among the models returned by the active Step endpoint.
 - **Long-running work** — delegate objectives with `/goal`, schedule work with `/cron`, and opt into multi-agent workflows with `/ultracode` or `/ultraloop`.
+- **Adaptive context management** — compact automatically at configurable global or per-model context ratios, while preserving response room on smaller context windows.
 - **Extension ecosystem** — use MCP servers, Agent Skills, plugins, and compatible Claude Code extensions.
 - **StepPage integration** — publish local pages through the existing StepPage integration when it is configured and available.
 - **Isolated customization** — local policies and utilities live in `packages/custom` instead of being scattered through upstream modules.

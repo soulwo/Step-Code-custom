@@ -5,7 +5,7 @@ This package contains the local customization primitives for `soulwo/Step-Code-c
 - `@step-harness/custom` exposes browser-safe configuration, bounded concurrency, streaming-parse scheduling, and model-catalog freshness helpers.
 - `@step-harness/custom/node` exposes Node-only atomic file writes, selective warning filtering, and JSON configuration loading.
 
-Keep the Node entry out of browser-facing imports.
+Keep the Node entry out of browser-facing imports. Atomic replacement preserves the destination's existing permission bits; the supplied `mode` is used when creating a new file.
 
 ## Unified configuration
 

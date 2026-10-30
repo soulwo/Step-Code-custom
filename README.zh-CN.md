@@ -42,6 +42,7 @@ Step Code Custom 是基于上游 [stepfun-ai/Step-Code](https://github.com/stepf
 - **完整编程闭环**：在交互式 TUI 中检查仓库、修改文件、执行工具并验证结果，也可通过 `step -p` 用于自动化任务。
 - **Step provider 接入**：支持 Step Plan 账号登录和 Step Platform API Key，并可切换当前 Step endpoint 返回的模型。
 - **长任务与多代理**：通过 `/goal` 管理持续目标，通过 `/cron` 定时执行，通过 `/ultracode` 或 `/ultraloop` 启用多代理工作流。
+- **自适应上下文管理**：支持按全局或单模型上下文比例自动压缩，并为较小上下文窗口保留足够的响应空间。
 - **扩展生态**：支持 MCP 服务器、Agent Skills、插件及兼容的 Claude Code 扩展。
 - **StepPage 集成**：配置且服务可用时，沿用现有 StepPage 能力发布本地页面。
 - **定制逻辑隔离**：本地策略和工具集中在 `packages/custom`，避免散落在上游核心模块。

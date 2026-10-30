@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -25,6 +25,19 @@ describe("custom primitives", () => {
 		const path = join(root, "value.json");
 		atomicWriteFileSync(path, JSON.stringify({ ok: true }));
 		expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({ ok: true });
+	});
+
+	it.skipIf(process.platform === "win32")("preserves the mode of an existing destination", () => {
+		const root = mkdtempSync(join(tmpdir(), "step-custom-"));
+		roots.push(root);
+		const path = join(root, "value.json");
+		writeFileSync(path, "old");
+		chmodSync(path, 0o660);
+
+		atomicWriteFileSync(path, "new");
+
+		expect(readFileSync(path, "utf8")).toBe("new");
+		expect(statSync(path).mode & 0o777).toBe(0o660);
 	});
 
 	it("preserves order and bounds concurrent operations", async () => {
