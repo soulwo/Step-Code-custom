@@ -11,7 +11,7 @@ const child = spawnSync(invocation.command, invocation.args, {
 	cwd: process.cwd(),
 	env: process.env,
 	encoding: "utf8",
-	timeout: 20_000,
+	timeout: 45_000,
 });
 if (child.error) throw child.error;
 process.stdout.write(child.stdout);

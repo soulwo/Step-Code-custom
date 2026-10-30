@@ -42,9 +42,9 @@ test("a source-launched subagent starts the real CLI from a different working di
 	}
 	// macOS Unix socket paths are bounded: tsx adds an IPC suffix below TMPDIR.
 	// Run the isolated suite with TMPDIR=/tmp if the default temp root causes EINVAL.
-	// A subsequent 20s child timeout was intermittent; focused and full reruns passed.
-	// Keep the deadline unchanged until startup-stage evidence identifies the cause.
-	const options = { cwd, env, encoding: "utf8" as const, timeout: 25_000 };
+	// Full-suite CI evidence shows the nested CLI can exceed 20s under startup load.
+	// Keep a bounded but generous deadline for both the parent and nested child.
+	const options = { cwd, env, encoding: "utf8" as const, timeout: 45_000 };
 	const launcher = [fileURLToPath(import.meta.resolve("tsx/cli")), "--tsconfig", tsconfig];
 	// Positive control: the source CLI itself works without built workspace packages.
 	const parent = spawnSync(process.execPath, [...launcher, cliPath, "--help"], options);
@@ -58,7 +58,7 @@ test("a source-launched subagent starts the real CLI from a different working di
 	expect(child.error).toBeUndefined();
 	expect(child.status, child.stderr).toBe(0);
 	expect(child.stdout).toContain("Usage:");
-}, 60_000);
+}, 120_000);
 
 test("preserves ordered preload hooks without forwarding debugger or parent execution modes", () => {
 	process.argv = [process.execPath, fixture];
