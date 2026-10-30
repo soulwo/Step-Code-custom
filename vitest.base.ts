@@ -1,6 +1,8 @@
 import { fileURLToPath } from "node:url";
 
 export const workspaceSourcePaths = {
+	customIndex: fileURLToPath(new URL("./packages/custom/src/index.ts", import.meta.url)),
+	customNodeIndex: fileURLToPath(new URL("./packages/custom/src/node.ts", import.meta.url)),
 	telemetryIndex: fileURLToPath(new URL("./packages/telemetry/src/index.ts", import.meta.url)),
 	telemetryTesting: fileURLToPath(new URL("./packages/telemetry/src/testing/index.ts", import.meta.url)),
 	aiIndex: fileURLToPath(new URL("./packages/providers/src/index.ts", import.meta.url)),
@@ -19,6 +21,8 @@ export const workspaceSourcePaths = {
 export default {
 	resolve: {
 		alias: [
+			{ find: /^@step-harness\/custom$/, replacement: workspaceSourcePaths.customIndex },
+			{ find: /^@step-harness\/custom\/node$/, replacement: workspaceSourcePaths.customNodeIndex },
 			{ find: /^@step-harness\/telemetry$/, replacement: workspaceSourcePaths.telemetryIndex },
 			{ find: /^@step-harness\/telemetry\/testing$/, replacement: workspaceSourcePaths.telemetryTesting },
 			{ find: /^@step-harness\/providers$/, replacement: workspaceSourcePaths.aiIndex },

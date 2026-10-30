@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAgentSession } from "../src/core/sdk.ts";
-import { SessionManager } from "../src/core/session-manager.ts";
+import { getDefaultSessionDir, SessionManager } from "../src/core/session-manager.ts";
 import { stepModel } from "./utilities.ts";
 
 describe("createAgentSession session manager defaults", () => {
@@ -42,9 +42,14 @@ describe("createAgentSession session manager defaults", () => {
 		const sessionFile = session.sessionManager.getSessionFile();
 
 		expect(sessionDir).toBe(expectedSessionDir);
-		expect(sessionFile?.startsWith(`${expectedSessionDir}/`)).toBe(true);
+		expect(sessionFile === undefined ? undefined : dirname(sessionFile)).toBe(expectedSessionDir);
 
 		session.dispose();
+	});
+
+	it("recognizes the default session layout below a direct custom agentDir", () => {
+		const manager = SessionManager.create(cwd, getDefaultSessionDir(cwd, agentDir));
+		expect(manager.usesDefaultSessionDir()).toBe(true);
 	});
 
 	it("keeps an explicit sessionManager override", async () => {
@@ -79,11 +84,11 @@ describe("createAgentSession session manager defaults", () => {
 		});
 
 		expect(session.sessionManager).toBe(sessionManager);
-		expect(session.systemPrompt).toContain(`Current working directory: ${sessionCwd}`);
+		expect(session.systemPrompt).toContain(`Current working directory: ${sessionCwd.replace(/\\/g, "/")}`);
 
 		const bashTool = session.agent.state.tools.find((tool) => tool.name === "bash");
 		expect(bashTool).toBeTruthy();
-		const result = await bashTool!.execute("test", { command: "pwd" });
+		const result = await bashTool!.execute("test", { command: 'node -p "process.cwd()"' });
 		const output = result.content
 			.filter((item): item is { type: "text"; text: string } => item.type === "text")
 			.map((item) => item.text)

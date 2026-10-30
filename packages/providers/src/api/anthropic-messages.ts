@@ -7,6 +7,7 @@ import type {
 	RawMessageStreamEvent,
 	RefusalStopDetails,
 } from "@anthropic-ai/sdk/resources/messages.js";
+import { createStreamingParseState, parseStreamingWithSchedule, type StreamingParseState } from "@step-harness/custom";
 import { calculateCost } from "../models.ts";
 import type {
 	AnthropicMessagesCompat,
@@ -538,6 +539,15 @@ export const stream: StreamFunction<"anthropic-messages", AnthropicOptions> = (
 
 			type Block = (ThinkingContent | TextContent | (ToolCall & { partialJson: string })) & { index: number };
 			const blocks = output.content as Block[];
+			const parseStates = new WeakMap<Block, StreamingParseState>();
+			const parseArguments = (block: Extract<Block, { type: "toolCall" }>, final = false) => {
+				let state = parseStates.get(block);
+				if (!state) {
+					state = createStreamingParseState();
+					parseStates.set(block, state);
+				}
+				return parseStreamingWithSchedule(state, block.partialJson, parseStreamingJson, final);
+			};
 
 			for await (const event of iterateAnthropicEvents(response, options?.signal)) {
 				if (event.type === "message_start") {
@@ -631,7 +641,7 @@ export const stream: StreamFunction<"anthropic-messages", AnthropicOptions> = (
 						const block = blocks[index];
 						if (block && block.type === "toolCall") {
 							block.partialJson += event.delta.partial_json;
-							block.arguments = parseStreamingJson(block.partialJson);
+							block.arguments = parseArguments(block) ?? block.arguments;
 							stream.push({
 								type: "toolcall_delta",
 								contentIndex: index,
@@ -667,7 +677,7 @@ export const stream: StreamFunction<"anthropic-messages", AnthropicOptions> = (
 								partial: output,
 							});
 						} else if (block.type === "toolCall") {
-							block.arguments = parseStreamingJson(block.partialJson);
+							block.arguments = parseArguments(block, true) ?? parseStreamingJson(block.partialJson);
 							// Finalize in-place and strip the scratch buffer so replay only
 							// carries parsed arguments.
 							delete (block as { partialJson?: string }).partialJson;

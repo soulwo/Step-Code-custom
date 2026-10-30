@@ -8,6 +8,7 @@
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { isModelCatalogStale } from "@step-harness/custom";
 import { setCapabilityOverrides } from "@step-harness/pi-tui";
 import { type ImageContent, modelsAreEqual } from "@step-harness/providers";
 import { STEP_PROVIDER_ID } from "@step-harness/providers/step-provider";
@@ -1229,18 +1230,32 @@ export async function prepareMain(args: string[], options?: MainOptions): Promis
 		}
 
 		// The Step catalog is discovered from `{base}/v1/models` and has no built-in
-		// baseline. When a Step credential is configured, refresh it from the network
-		// before resolving the initial model, so startup finds the account's models
-		// instead of reporting "no models available". Best-effort and bounded.
+		// baseline. Missing or stale catalogs are refreshed before model selection;
+		// fresh catalogs can be used immediately and revalidated in the background.
 		if (STEP_ENTRYPOINT && modelRuntime.getProviderAuthStatus(STEP_PROVIDER_ID).configured) {
-			await modelRuntime
-				.refresh({
-					allowNetwork: true,
-					force: true,
-					providers: [STEP_PROVIDER_ID],
-					signal: AbortSignal.timeout(15_000),
-				})
-				.catch(() => {});
+			const hasCachedModels = modelRuntime
+				.getAvailableSnapshot()
+				.some((model) => model.provider === STEP_PROVIDER_ID);
+			const checkedAt = await modelRuntime.getProviderCatalogCheckedAt(STEP_PROVIDER_ID).catch(() => undefined);
+			if (!hasCachedModels || isModelCatalogStale(checkedAt)) {
+				await modelRuntime
+					.refresh({
+						allowNetwork: true,
+						force: true,
+						providers: [STEP_PROVIDER_ID],
+						signal: AbortSignal.timeout(15_000),
+					})
+					.catch(() => {});
+			} else {
+				void modelRuntime
+					.refresh({
+						allowNetwork: true,
+						force: true,
+						providers: [STEP_PROVIDER_ID],
+						signal: AbortSignal.timeout(15_000),
+					})
+					.catch(() => {});
+			}
 		}
 		const diagnostics: AgentSessionRuntimeDiagnostic[] = [
 			...projectTrustDiagnostics,

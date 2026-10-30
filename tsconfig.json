@@ -6,6 +6,8 @@
 		"moduleResolution": "NodeNext",
 		"paths": {
 			"*": ["./*"],
+			"@step-harness/custom": ["./packages/custom/src/index.ts"],
+			"@step-harness/custom/node": ["./packages/custom/src/node.ts"],
 			"@step-harness/telemetry": ["./packages/telemetry/src/index.ts"],
 			"@step-harness/telemetry/testing": ["./packages/telemetry/src/testing/index.ts"],
 			"@step-harness/providers": ["./packages/providers/src/index.ts"],

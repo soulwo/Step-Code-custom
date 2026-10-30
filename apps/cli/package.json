@@ -24,6 +24,7 @@
 		"smoke": "node ../../scripts/smoke-apps-cli.mjs"
 	},
 	"dependencies": {
+		"@step-harness/custom": "workspace:*",
 		"@step-harness/agent-core": "^0.84.4",
 		"@step-harness/providers": "^0.84.4",
 		"@step-harness/coding-agent": "^0.84.4",

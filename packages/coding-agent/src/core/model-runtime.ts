@@ -139,6 +139,7 @@ export class ModelRuntime implements Models {
 	private readonly extensionProviders = new Map<string, ProviderConfigInput>();
 	private readonly compositionErrors = new Map<string, string>();
 	private readonly modelsPath: string | undefined;
+	private readonly modelsStore: ModelsStore;
 	private config: ModelConfig;
 	private snapshot: ModelRuntimeSnapshot = {
 		all: [],
@@ -163,6 +164,7 @@ export class ModelRuntime implements Models {
 		this.credentials = credentials;
 		this.config = config;
 		this.modelsPath = modelsPath;
+		this.modelsStore = modelsStore;
 		this.defaultBuiltins = new Map(providers.map((provider) => [provider.id, provider]));
 		for (const [providerId, provider] of this.defaultBuiltins) this.builtins.set(providerId, provider);
 		this.models = createModels({ credentials, modelsStore });
@@ -370,6 +372,12 @@ export class ModelRuntime implements Models {
 
 	getModel(providerId: string, modelId: string): Model<Api> | undefined {
 		return this.models.getModel(providerId, modelId);
+	}
+
+	/** Last successful dynamic-catalog refresh time, when the provider persists one. */
+	async getProviderCatalogCheckedAt(providerId: string): Promise<number | undefined> {
+		const stored = await this.modelsStore.read(providerId);
+		return stored?.checkedAt;
 	}
 
 	async checkAuth(providerId: string, options?: AuthOperationOptions): Promise<AuthCheck | undefined> {

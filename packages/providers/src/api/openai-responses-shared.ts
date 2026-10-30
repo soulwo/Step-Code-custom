@@ -1,3 +1,4 @@
+import { createStreamingParseState, parseStreamingWithSchedule, type StreamingParseState } from "@step-harness/custom";
 import type OpenAI from "openai";
 import type {
 	Tool as OpenAITool,
@@ -439,6 +440,15 @@ export async function processResponsesStream<TApi extends Api>(
 ): Promise<void> {
 	let sawTerminalResponseEvent = false;
 	const outputSlots = new Map<number, ResponsesOutputSlot>();
+	const parseStates = new WeakMap<StreamingToolCall, StreamingParseState>();
+	const parseArguments = (block: StreamingToolCall, final = false) => {
+		let state = parseStates.get(block);
+		if (!state) {
+			state = createStreamingParseState();
+			parseStates.set(block, state);
+		}
+		return parseStreamingWithSchedule(state, block.partialJson, parseStreamingJson, final);
+	};
 	const reasoningBlocksById = new Map<string, ThinkingContent>();
 	const applyMessagePhaseStopReason = (item: ResponseOutputItem): void => {
 		if (item.type === "message" && item.phase === "final_answer") {
@@ -654,14 +664,14 @@ export async function processResponsesStream<TApi extends Api>(
 			const slot = getSlot(event.output_index, "toolCall");
 			if (!slot || slot.block.partialJson === undefined) continue;
 			slot.block.partialJson += event.delta;
-			slot.block.arguments = parseStreamingJson(slot.block.partialJson);
+			slot.block.arguments = parseArguments(slot.block) ?? slot.block.arguments;
 			pushToolCallDelta(slot, event.delta);
 		} else if (event.type === "response.function_call_arguments.done") {
 			const slot = getSlot(event.output_index, "toolCall");
 			if (!slot || slot.block.partialJson === undefined) continue;
 			const previousPartialJson = slot.block.partialJson;
 			slot.block.partialJson = event.arguments;
-			slot.block.arguments = parseStreamingJson(slot.block.partialJson);
+			slot.block.arguments = parseArguments(slot.block, true) ?? parseStreamingJson(slot.block.partialJson);
 
 			if (event.arguments.startsWith(previousPartialJson)) {
 				const delta = event.arguments.slice(previousPartialJson.length);
@@ -711,7 +721,8 @@ export async function processResponsesStream<TApi extends Api>(
 				slot?.type === "toolCall" &&
 				slot.block.partialJson !== undefined
 			) {
-				slot.block.arguments = parseStreamingJson(item.arguments || slot.block.partialJson || "{}");
+				slot.block.partialJson = item.arguments || slot.block.partialJson || "{}";
+				slot.block.arguments = parseArguments(slot.block, true) ?? parseStreamingJson(slot.block.partialJson);
 				if (item.namespace !== undefined) slot.block.namespace = item.namespace;
 				// Finalize in-place and strip the scratch buffer so replay only
 				// carries parsed arguments.

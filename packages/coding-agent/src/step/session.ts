@@ -10,6 +10,7 @@ import type { Dirent } from "node:fs";
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { basename, isAbsolute, join, relative } from "node:path";
+import { getCustomConfig, mapWithConcurrency } from "@step-harness/custom";
 import {
 	getDefaultSessionDir,
 	type NewSessionOptions,
@@ -253,7 +254,9 @@ async function listStepSessionRoot(root: string, onProgress?: SessionListProgres
 		.map((entry) => join(root, entry.name));
 	if (directories.length === 0) return [];
 
-	const lists = await Promise.all(directories.map((directory) => SessionManager.listAll(directory, onProgress)));
+	const lists = await mapWithConcurrency(directories, getCustomConfig().sessionScanConcurrency, (directory) =>
+		SessionManager.listAll(directory, onProgress),
+	);
 	return lists.flat().sort((a, b) => b.modified.getTime() - a.modified.getTime());
 }
 

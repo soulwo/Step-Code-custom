@@ -10,7 +10,9 @@
 			"@step-harness/providers/*": ["../providers/dist/*.d.ts", "../providers/dist/providers/*.d.ts"],
 			"@step-harness/pi-tui": ["../tui/dist/index.d.ts"],
 			"@step-harness/pi-tui/*": ["../tui/dist/*.d.ts", "../tui/dist/components/*.d.ts"],
-			"@step-harness/config": ["../config/dist/index.d.ts"]
+			"@step-harness/config": ["../config/dist/index.d.ts"],
+			"@step-harness/custom": ["../custom/dist/index.d.ts"],
+			"@step-harness/custom/node": ["../custom/dist/node.d.ts"]
 		},
 		"rootDir": "./src"
 	},

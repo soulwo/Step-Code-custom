@@ -51,6 +51,7 @@
 		"prepublishOnly": "npm run clean && npm run build"
 	},
 	"dependencies": {
+		"@step-harness/custom": "workspace:*",
 		"@anthropic-ai/sdk": "0.91.1",
 		"@step-harness/telemetry": "^0.84.4",
 		"http-proxy-agent": "7.0.2",

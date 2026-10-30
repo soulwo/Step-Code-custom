@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -115,30 +115,52 @@ describe("Step search_web tool", () => {
 		}
 	});
 
+	it("reads the canonical Step auth.json when no authPath is supplied", async () => {
+		const home = await mkdtemp(join(tmpdir(), "step-search-web-home-"));
+		try {
+			const configRoot = join(home, ".stepcode");
+			await mkdir(configRoot, { recursive: true });
+			await writeFile(
+				join(configRoot, "auth.json"),
+				JSON.stringify({ step: { type: "api_key", key: "stored-key" } }),
+			);
+			expect(resolveSearchWebApiKey({ env: { HOME: home } })).toBe("stored-key");
+		} finally {
+			await rm(home, { recursive: true, force: true });
+		}
+	});
+
 	it("calls the remote tool with a bearer header and compacts results", async () => {
 		const calls: SearchWebInvocation[] = [];
-		const tool = createSearchWebTool({ url: "https://search.example.com", apiKey: "search-key" }, async (input) => {
-			calls.push(input);
-			return {
-				structuredContent: {
-					results: [
-						{
-							position: 1,
-							title: "Example result",
-							url: "https://example.com",
-							snippet: "short snippet",
-							content: "full page content must not reach the model",
-						},
-						{
-							position: 2,
-							title: "Long result",
-							url: "https://example.org",
-							snippet: "x".repeat(450),
-						},
-					],
-				},
-			};
-		});
+		const tool = createSearchWebTool(
+			{
+				url: "https://search.example.com",
+				apiKey: "search-key",
+				authPath: join(tmpdir(), "step-search-web-no-profile-auth.json"),
+			},
+			async (input) => {
+				calls.push(input);
+				return {
+					structuredContent: {
+						results: [
+							{
+								position: 1,
+								title: "Example result",
+								url: "https://example.com",
+								snippet: "short snippet",
+								content: "full page content must not reach the model",
+							},
+							{
+								position: 2,
+								title: "Long result",
+								url: "https://example.org",
+								snippet: "x".repeat(450),
+							},
+						],
+					},
+				};
+			},
+		);
 
 		const result = await tool.execute(
 			"call-1",
@@ -232,10 +254,13 @@ describe("Step search_web tool", () => {
 	});
 
 	it("turns remote MCP errors into tool failures that name the billed endpoint", async () => {
-		const tool = createSearchWebTool({ apiKey: "search-key" }, async () => ({
-			isError: true,
-			content: "502 Bad Gateway",
-		}));
+		const tool = createSearchWebTool(
+			{ apiKey: "search-key", authPath: join(tmpdir(), "step-search-web-no-profile-auth.json") },
+			async () => ({
+				isError: true,
+				content: "502 Bad Gateway",
+			}),
+		);
 
 		await expect(
 			tool.execute("call-4", { query: "query" }, undefined, undefined, undefined as never),

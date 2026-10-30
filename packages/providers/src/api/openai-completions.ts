@@ -1,3 +1,4 @@
+import { createStreamingParseState, parseStreamingWithSchedule, type StreamingParseState } from "@step-harness/custom";
 import OpenAI from "openai";
 import type {
 	ChatCompletionAssistantMessageParam,
@@ -387,6 +388,15 @@ export const stream: StreamFunction<"openai-completions", OpenAICompletionsOptio
 			const toolCallBlocksByIndex = new Map<number, StreamingToolCallBlock>();
 			const toolCallBlocksById = new Map<string, StreamingToolCallBlock>();
 			const blocks = output.content as StreamingBlock[];
+			const parseStates = new WeakMap<StreamingToolCallBlock, StreamingParseState>();
+			const parseArguments = (block: StreamingToolCallBlock, final = false) => {
+				let state = parseStates.get(block);
+				if (!state) {
+					state = createStreamingParseState();
+					parseStates.set(block, state);
+				}
+				return parseStreamingWithSchedule(state, block.partialArgs, parseStreamingJson, final);
+			};
 			const getContentIndex = (block: StreamingBlock) => blocks.indexOf(block);
 			const getCustomToolCallInput = (block: StreamingToolCallBlock): string => {
 				const property = block.customInput?.property;
@@ -442,7 +452,7 @@ export const stream: StreamFunction<"openai-completions", OpenAICompletionsOptio
 							});
 						}
 					} else {
-						block.arguments = parseStreamingJson(block.partialArgs);
+						block.arguments = parseArguments(block, true) ?? parseStreamingJson(block.partialArgs);
 					}
 					// Finalize in-place and strip the scratch buffers so replay only
 					// carries parsed arguments.
@@ -633,7 +643,7 @@ export const stream: StreamFunction<"openai-completions", OpenAICompletionsOptio
 							if (toolCall.function?.arguments) {
 								delta = toolCall.function.arguments;
 								block.partialArgs = (block.partialArgs ?? "") + toolCall.function.arguments;
-								block.arguments = parseStreamingJson(block.partialArgs);
+								block.arguments = parseArguments(block) ?? block.arguments;
 							} else if (toolCall.custom?.input) {
 								const nextInput = getCustomToolCallInput(block) + toolCall.custom.input;
 								delta = appendCustomToolCallInput(block, nextInput, false) ?? "";

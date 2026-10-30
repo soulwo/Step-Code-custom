@@ -8,7 +8,6 @@
 // config.ts resolves the Step storage namespace regardless of launcher name.
 import "#bootstrap/environment";
 import { join, resolve } from "node:path";
-
 import {
 	ambiguousPluginServerNames,
 	applyStepCodeConfigDefaults,
@@ -81,6 +80,7 @@ import {
 	updateGlobalMcpConfig,
 	withStepDefaults,
 } from "@step-harness/coding-agent";
+import { installSelectiveWarningFilter, loadCustomConfig } from "@step-harness/custom/node";
 import { parseArgs, resolveAppMode, toPrintOutputMode } from "#args/index";
 import { loadStepStartupConfig } from "#bootstrap/config";
 import { createStepExtensionFactories } from "#bootstrap/extensions";
@@ -104,7 +104,8 @@ import { observability } from "./observability.ts";
  */
 process.title = "step";
 process.env.AI_AGENT = "step";
-process.emitWarning = (() => {}) as typeof process.emitWarning;
+loadCustomConfig();
+installSelectiveWarningFilter();
 ensureStepGlobalConfig(process.env);
 setStderrDevLogStorageRootDirectory(resolveStepStorageRoot(process.env));
 installProcessStderrDevLogCapture();

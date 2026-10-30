@@ -47,7 +47,7 @@ describe("Step Pi storage wrappers", () => {
 		const expectedDir = join(agentDir, "sessions", safeCwd);
 
 		expect(manager.getSessionDir()).toBe(expectedDir);
-		expect(manager.getSessionFile()?.startsWith(`${expectedDir}/`)).toBe(true);
+		expect(manager.getSessionFile()?.startsWith(expectedDir)).toBe(true);
 		expect(manager.getSessionFile()).not.toContain(`${join(root, ".pi")}/`);
 		expect(existsSync(join(root, ".pi"))).toBe(false);
 	});
@@ -103,7 +103,7 @@ describe("Step Pi storage wrappers", () => {
 		const manager = createStepSessionManager(cwd, { sessionDir });
 
 		expect(manager.getSessionDir()).toBe(sessionDir);
-		expect(manager.getSessionFile()?.startsWith(`${sessionDir}/`)).toBe(true);
+		expect(manager.getSessionFile()?.startsWith(sessionDir)).toBe(true);
 	});
 
 	test("resolves managed fd/rg binaries lazily from the active Step agent directory", async () => {
@@ -149,7 +149,7 @@ describe("Step Pi storage wrappers", () => {
 			agentDir: stepAgentDir,
 			newSession: { id: "step-fork" },
 		});
-		expect(fork.getSessionDir()).toContain(`${join(stepAgentDir, "sessions")}/`);
+		expect(fork.getSessionDir()).toContain(join(stepAgentDir, "sessions"));
 		expect(fork.getSessionDir()).not.toContain(`${join(root, ".pi")}/`);
 	});
 
@@ -247,7 +247,7 @@ describe("Step Pi storage wrappers", () => {
 		vi.stubEnv("PI_CODING_AGENT_DIR", join(root, ".pi", "agent"));
 
 		const manager = StepSessionManager.create(cwd, { newSession: { id: "env-step" } });
-		expect(manager.getSessionDir()).toContain(`${join(agentDir, "sessions")}/`);
+		expect(manager.getSessionDir()).toContain(join(agentDir, "sessions"));
 		expect(process.env.PI_CODING_AGENT_DIR).toBe(join(root, ".pi", "agent"));
 	});
 

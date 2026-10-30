@@ -1,4 +1,5 @@
 import type { AgentMessage } from "@step-harness/agent-core";
+import { atomicWriteFileWithSync } from "@step-harness/custom/node";
 import { type ImageContent, type Message, type TextContent, type Usage, uuidv7 } from "@step-harness/providers";
 import { randomUUID } from "crypto";
 import {
@@ -14,7 +15,7 @@ import {
 	writeFileSync,
 } from "fs";
 import { readdir, stat } from "fs/promises";
-import { join, resolve } from "path";
+import { basename, dirname, join, resolve } from "path";
 import { createInterface } from "readline";
 import { StringDecoder } from "string_decoder";
 import { APP_NAME, getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
@@ -944,14 +945,11 @@ export class SessionManager {
 
 	private _rewriteFile(): void {
 		if (!this.persist || !this.sessionFile) return;
-		const fd = openSync(this.sessionFile, "w");
-		try {
+		atomicWriteFileWithSync(this.sessionFile, (fd) => {
 			for (const entry of this.fileEntries) {
 				writeFileSync(fd, `${JSON.stringify(entry)}\n`);
 			}
-		} finally {
-			closeSync(fd);
-		}
+		});
 		this._notifyFilePersisted(this.sessionFile, "rewrite");
 	}
 
@@ -989,7 +987,12 @@ export class SessionManager {
 	}
 
 	usesDefaultSessionDir(): boolean {
-		return this.sessionDir === getDefaultSessionDirPath(this.cwd);
+		// Compare the layout rather than the process-global root: SDK callers may
+		// deliberately place the same per-cwd layout below a custom agentDir.
+		return (
+			basename(this.sessionDir) === basename(getDefaultSessionDirPath(this.cwd)) &&
+			basename(dirname(this.sessionDir)) === "sessions"
+		);
 	}
 
 	getSessionId(): string {

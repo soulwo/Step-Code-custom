@@ -32,6 +32,7 @@ apps/
     src/bun/                   Standalone binary entry
     src/ui/                    UI host, runtime, and views
 packages/
+  custom/                      Local customization primitives and unified configuration
   agent-core/                  Generic Agent runtime
     src/harness/               Sessions, context, compaction, and generic tools
     src/search/                Generic search
@@ -66,14 +67,15 @@ Dependencies flow from product entry points toward foundational capabilities. Fo
 
 | Layer | Module and local rules | Responsibility | Allowed internal dependencies |
 | --- | --- | --- | --- |
+| Foundation | [custom](packages/custom/README.md) | Local customization primitives and unified configuration; Node-only helpers stay behind `@step-harness/custom/node` | None |
 | Foundation | [telemetry](packages/telemetry/AGENTS.md) | Telemetry contracts, typed schemas, no-op and in-memory reference implementations | None |
 | Foundation | [tui](packages/tui/AGENTS.md) | Terminal input, layout, differential rendering, and generic components | None |
 | Foundation | [contracts](packages/contracts/AGENTS.md) | In-process host/Agent interfaces, wire events, and framing | None; runtime dependencies must remain empty |
 | Foundation | [config](packages/config/AGENTS.md) | Product-neutral configuration migrations | None |
-| Model runtime | [providers](packages/providers/AGENTS.md) | Providers, API dialects, model catalogs, credentials, and vendor adapters | telemetry |
+| Model runtime | [providers](packages/providers/AGENTS.md) | Providers, API dialects, model catalogs, credentials, and vendor adapters | telemetry, custom |
 | Agent runtime | [agent-core](packages/agent-core/AGENTS.md) | The single Agent Loop, generic harness, session and context semantics | providers, telemetry |
-| Coding product | [coding-agent](packages/coding-agent/AGENTS.md) | Coding sessions, tool policies, extensions, orchestration, Step integrations, and themes | agent-core, providers, config, tui |
-| Application host | [apps/cli](apps/cli/AGENTS.md) | argv, startup composition, mode routing, process lifecycle, and interactive UI | coding-agent, agent-core, providers, config, tui |
+| Coding product | [coding-agent](packages/coding-agent/AGENTS.md) | Coding sessions, tool policies, extensions, orchestration, Step integrations, and themes | agent-core, providers, config, tui, custom |
+| Application host | [apps/cli](apps/cli/AGENTS.md) | argv, startup composition, mode routing, process lifecycle, and interactive UI | coding-agent, agent-core, providers, config, tui, custom |
 
 - Register new workspaces in `pnpm-workspace.yaml`, root `package.json`, and `scripts/workspace-registry.json`. Use the `@step-harness/*` scope for new internal packages.
 - Use public package entry points for cross-package calls. Do not depend on another package's `dist/` layout or bypass boundaries with deep source imports.

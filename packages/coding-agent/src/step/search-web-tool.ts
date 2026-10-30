@@ -1,11 +1,10 @@
-import { join } from "node:path";
 import type { AgentToolResult } from "@step-harness/agent-core";
 import type { Credential } from "@step-harness/providers";
 import { type Static, Type } from "typebox";
 import { readStoredCredential } from "../core/auth-storage.ts";
 import type { ExtensionContext, ToolDefinition } from "../core/extensions/types.ts";
 import { STEP_PROVIDER_ID } from "../features/step-provider/index.ts";
-import { resolveStepAgentDir } from "./environment.ts";
+import { getStepAuthPath } from "./auth.ts";
 import { readStepLoginProfile } from "./login-flow.ts";
 import { invokeRemoteMcpTool, type RemoteMcpToolInvocation, type RemoteMcpToolResult } from "./mcp-client.ts";
 import type { StepLoginProfileId } from "./onboarding.ts";
@@ -126,9 +125,7 @@ export function resolveSearchWebApiKey(options: SearchWebToolOptions = {}): stri
 	if (envKey) return envKey;
 
 	const authPath =
-		normalizeOptionalText(options.authPath) ??
-		normalizeOptionalText(env.STEPCODE_AUTH_PATH) ??
-		join(resolveStepAgentDir(env), "auth.json");
+		normalizeOptionalText(options.authPath) ?? normalizeOptionalText(env.STEPCODE_AUTH_PATH) ?? getStepAuthPath(env);
 	return readCredentialToken(readStoredCredential(STEP_PROVIDER_ID, authPath));
 }
 
@@ -194,9 +191,7 @@ export function createSearchWebTool(
 
 function resolveSearchWebAuthPath(options: SearchWebToolOptions, env: Record<string, string | undefined>): string {
 	return (
-		normalizeOptionalText(options.authPath) ??
-		normalizeOptionalText(env.STEPCODE_AUTH_PATH) ??
-		join(resolveStepAgentDir(env), "auth.json")
+		normalizeOptionalText(options.authPath) ?? normalizeOptionalText(env.STEPCODE_AUTH_PATH) ?? getStepAuthPath(env)
 	);
 }
 

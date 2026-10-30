@@ -1,8 +1,9 @@
 /** Compatibility loader for the config file supplied by StepCode. */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
+import { atomicWriteFileSync } from "@step-harness/custom/node";
 import type { AnthropicMessagesCompat, Api } from "@step-harness/providers";
 import lockfile from "proper-lockfile";
 import type { ExtensionAPI, InlineExtension, ProviderConfig, ProviderModelConfig } from "../core/extensions/types.ts";
@@ -293,7 +294,7 @@ class StepCodeSettingsAuthority {
 			release = acquireConfigLock(this.path);
 			const root = readConfigRoot(this.path);
 			update(root);
-			writeFileSync(this.path, `${JSON.stringify(root, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+			atomicWriteFileSync(this.path, `${JSON.stringify(root, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
 		} finally {
 			release?.();
 		}

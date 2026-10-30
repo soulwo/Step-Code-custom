@@ -4,6 +4,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { atomicWriteFileSync } from "@step-harness/custom/node";
 import type { AuthOperationOptions, Credential, CredentialInfo, CredentialStore } from "@step-harness/providers";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
@@ -124,7 +125,7 @@ export class FileAuthStorageBackend implements AuthStorageBackend {
 			const current = existsSync(this.authPath) ? readFileSync(this.authPath, "utf-8") : undefined;
 			const { result, next } = fn(current);
 			if (next !== undefined) {
-				writeFileSync(this.authPath, next, AUTH_FILE_WRITE_OPTIONS);
+				atomicWriteFileSync(this.authPath, next, AUTH_FILE_WRITE_OPTIONS);
 			}
 			return result;
 		} finally {
@@ -205,7 +206,7 @@ export class FileAuthStorageBackend implements AuthStorageBackend {
 			throwIfCompromised();
 			options?.signal?.throwIfAborted();
 			if (next !== undefined) {
-				writeFileSync(this.authPath, next, AUTH_FILE_WRITE_OPTIONS);
+				atomicWriteFileSync(this.authPath, next, AUTH_FILE_WRITE_OPTIONS);
 			}
 			throwIfCompromised();
 			return result;

@@ -14,6 +14,7 @@ import { mkdir as fsMkdir, readdir as fsReaddir, stat as fsStat, readFile, write
 import os from "node:os";
 import path from "node:path";
 import type { AgentToolResult } from "@step-harness/agent-core";
+import { getCustomConfig, mapWithConcurrency } from "@step-harness/custom";
 import { type Component, Text } from "@step-harness/pi-tui";
 import { type Static, Type } from "typebox";
 import type {
@@ -689,20 +690,18 @@ async function executeFindFiles(
 	const structuredPaths = findFilesFromDetails(result);
 	const rawPaths = structuredPaths ?? stripNativeFindNotices(textFromResult(result));
 	const searchRoot = resolveToCwd(nativeArgs.path ?? ".", effectiveCwd);
-	const ranked = await Promise.all(
-		rawPaths.map(async (display) => {
-			const prefixedDisplay =
-				absoluteScope && !path.isAbsolute(display) ? path.join(absoluteScope.directory, display) : display;
-			let mtimeMs = 0;
-			try {
-				mtimeMs = (await fsStat(resolveNativePath(display, searchRoot))).mtimeMs;
-			} catch {
-				// A file can disappear between fd output and stat; keep it in the
-				// deterministic tail rather than dropping an otherwise valid match.
-			}
-			return { display: prefixedDisplay.split(path.sep).join("/"), mtimeMs };
-		}),
-	);
+	const ranked = await mapWithConcurrency(rawPaths, getCustomConfig().findStatConcurrency, async (display) => {
+		const prefixedDisplay =
+			absoluteScope && !path.isAbsolute(display) ? path.join(absoluteScope.directory, display) : display;
+		let mtimeMs = 0;
+		try {
+			mtimeMs = (await fsStat(resolveNativePath(display, searchRoot))).mtimeMs;
+		} catch {
+			// A file can disappear between fd output and stat; keep it in the
+			// deterministic tail rather than dropping an otherwise valid match.
+		}
+		return { display: prefixedDisplay.split(path.sep).join("/"), mtimeMs };
+	});
 	ranked.sort((left, right) => right.mtimeMs - left.mtimeMs || left.display.localeCompare(right.display, "en"));
 	const returned = ranked.slice(0, requestedLimit).map((entry) => entry.display);
 	const details = nativeDetails(result);
