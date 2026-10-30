@@ -1,84 +1,34 @@
 # Security Policy
 
-This document should guide you about understanding the security concept behind
-StepCode and also where the boundaries are.
+Step Code Custom is a locally running coding agent. It operates with the permissions of the user who starts it, so users should review tool calls and, when appropriate, run it inside a container, virtual machine, or other sandbox.
 
-In general StepCode is a coding agent that runs locally within the security boundary
-of the user that is running it.  It's the responsibility of the user to monitor
-its operations or to contain it within a container, virtual machine or other
-Sandbox solution.
+The local user account, writable project files, and the Step Code Custom process belong to the same general trust boundary. An attacker who can already modify the user's workspace, shell startup files, environment, or configuration can often influence local developer tools. Reports that require this prior local access must also demonstrate a distinct privilege-boundary violation in this project.
 
-StepCode treats the local user account and files writable by that account as inside
-the same trust boundary as the StepCode process itself.  If an attacker can modify files
-under the user's home directory, workspace, shell startup files, environment, or
-StepCode configuration, they can generally influence StepCode or other local developer tools.
-Reports that depend on such prior local write access are not security
-vulnerabilities unless they demonstrate how StepCode grants that write access or crosses
-an operating-system privilege boundary.
+Only install trustworthy extensions and skills, and use the agent in repositories whose instructions you trust. Files such as `AGENTS.md`, source comments, and extension instructions can influence model behavior and tool calls.
 
-StepCode relies on users installing trustworthy extensions and loading trustworthy
-skills and only to use StepCode within trusted repositories.  This is because files
-like `AGENTS.md` or instructions in comments can be used to prompt inject the
-coding agent trivially and this cannot be protected against.
+## Reporting a vulnerability
 
-## Reporting a Vulnerability
+Report security-sensitive issues privately through [GitHub Security Advisories](https://github.com/soulwo/Step-Code-custom/security/advisories) for `soulwo/Step-Code-custom`. Do not post credentials, private repository content, or exploit details in a public issue.
 
-If you believe you found a security vulnerability in StepCode or another package in
-this repository, please report it privately through GitHub Security Advisories for
-this repository.
-
-Please include:
+Include:
 
 - A description of the issue and its impact
-- Steps to reproduce, proof of concept, or relevant logs
-- Affected package, version, commit, or configuration
-- Any known mitigations
-
-Do not open a public issue for security-sensitive reports.  We will review
-reports and coordinate disclosure as appropriate.
+- Reproduction steps, proof of concept, or relevant logs
+- The affected package, version, commit SHA, and configuration
+- Any known mitigation
 
 ## Scope
 
-Security issues in the distributed packages, command-line tools, APIs, and
-repository code are in scope.
+Security defects in this repository's command-line tools, APIs, customization layer, and distributed source are in scope.
 
-## Out Of Scope
+Out of scope examples include:
 
-- Local code execution or sandboxing behavior (the StepCode coding agent intentionally does not have a sandbox)
-- Behavior of StepCode extensions or skills installed by the user
-- Risks from working in untrusted repositories
-- Risks from installing untrusted extensions, skills, packages, or tools
-- Isuses caused by non trustworthy MITM proxies
-- Public internet exposure of a StepCode installation
-- Prompt injection attacks
-- Exposed secrets that are third-party/user-controlled credentials
-- Reports requiring the ability to create, modify, delete, or replace files,
-  directories, symlinks, environment variables, shell configuration, or other
-  user-controlled local state on the target machine. This includes `~/.stepcode`,
-  `~/.stepcode/agent/models.json`, workspace files, `AGENTS.md`, skills, extensions,
-  extension configuration, dotfiles, and files synchronized through NFS, roaming
-  profiles, or dotfile managers, unless the report shows how StepCode itself grants
-  that access.
-- Issues caused by intentionally weakened user configuration.
-- Resource/DOS claims that require trusted local input/config against the StepCode coding agent.
-- Reports about malicious model output.
-- User-approved or user-initiated local actions presented as vulnerabilities.
+- Expected local code execution or tool use approved by the user
+- Malicious extensions, skills, repositories, or model output supplied by the user
+- Prompt injection without a separate security-boundary bypass
+- Third-party credentials already exposed by the user
+- Reports that only require modification of user-controlled local state
+- Denial-of-service scenarios driven solely by trusted local input
+- Vulnerabilities that belong exclusively to the upstream Step service or another third party
 
-## Notes for Reporters
-
-The most useful reports show a current, reproducible security boundary bypass
-with demonstrated impact.  Reports that only show expected local-agent behavior,
-prompt injection, or a malicious trusted extension/skill are not security
-vulnerabilities under this model.
-
-For example, a report showing that malicious contents written to a trusted StepCode
-configuration file cause StepCode to execute commands, load attacker-controlled tools,
-send credentials to an attacker-controlled endpoint, or otherwise change behavior
-is out of scope.
-
-When possible, include the exact affected path, package version or commit SHA,
-configuration, and a proof of concept against the latest release or latest
-`main`.  For dependency reports, include evidence that the shipped dependency is
-affected and that the issue is reachable through StepCode.  For exposed-secret reports,
-include evidence that the credential is owned by StepFun or grants access to
-StepFun-operated infrastructure or services.
+Useful reports identify a current, reproducible boundary violation with demonstrated impact. Include the exact affected path and commit, and explain why the behavior differs from the user's approved action.

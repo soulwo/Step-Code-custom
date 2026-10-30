@@ -1,84 +1,67 @@
-# Step Code
+# Step Code Custom
 
 <p align="center">
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-![test.jpg](https://static-openapi.stepfun.com/resource/test.jpg)
-
-<h3><strong>Swift execution, long-horizon reliability, and high token efficiency.</strong></h3>
+**A privately maintained terminal coding assistant with isolated customization, reliable local state, and bounded runtime overhead.**
 
 ---
 
-Step Code runs in your terminal and handles the full task loop—reading code, making changes, and running tests\. It works with the Step provider and discovers the available Step models after sign\-in\. MCP servers, Agent Skills, plugins, and multi\-agent orchestration work out of the box; you can delegate long\-running tasks to `/goal` and let Step Code drive them forward autonomously\.
+Step Code Custom is an independently maintained, private build of a terminal coding agent. It reads and modifies code, runs commands and tests, resumes sessions, and supports interactive or headless workflows. The original `step` command and existing configuration formats are preserved so current workflows continue to work.
 
-Step Code comes with built-in [StepPage](https://platform.stepfun.ai/docs/en/step-code/reference/steppage) publishing. Once your local page is ready, you can publish it as an accessible static website with a single command—bringing development, debugging, and delivery all within the same terminal\.
+This repository is owned and maintained at [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom). It is not the upstream project's release page, and it does not publish official upstream installers.
 
-![StepPage publishing demo](https://github.com/user-attachments/assets/66843695-3c77-4b26-bd2c-4cd2397a98bf)
+## Why Step Code Custom
 
-## Why Step Code
-
-- **Token efficiency** — tuned alongside Step models to consume fewer tokens for the same task; Long\-horizon tasks are split across parallel subagents, each with its own isolated context, so redundant content never enters the main conversation\.
-
-- **Static site publishing** — the built\-in steppage plugin publishes a local directory to a shareable static URL in one command, with version management and rollback\.
-
-- **Long\-running task delegation** — `/goal` hands an objective to Step Code, which works toward it autonomously, and `/cron` runs on a schedule; the status line shows a live timer for the active task\.
-
-- **Step provider access** — sign in with a Step Plan account or use a Step Platform API key; switch among the models returned by Step in `/model`\.
-
-- **Ecosystem compatibility** — MCP servers and Agent Skills work out of the box, and most Claude Code plugins are directly compatible\.
+- **Complete coding loop** — inspect a repository, edit files, execute tools, and verify changes in an interactive TUI or with `step -p` for automation.
+- **Step provider integration** — sign in with a Step Plan account or use a Step Platform API key, then select among the models returned by the active Step endpoint.
+- **Long-running work** — delegate objectives with `/goal`, schedule work with `/cron`, and opt into multi-agent workflows with `/ultracode` or `/ultraloop`.
+- **Extension ecosystem** — use MCP servers, Agent Skills, plugins, and compatible Claude Code extensions.
+- **StepPage integration** — publish local pages through the existing StepPage integration when it is configured and available.
+- **Isolated customization** — local policies and utilities live in `packages/custom` instead of being scattered through upstream modules.
+- **Reliability and performance improvements** — atomic writes for important state files, bounded file and session I/O, throttled intermediate JSON parsing, and model-catalog caching with background refresh.
 
 ## Installation
 
-Pick the official installer for your platform\. It downloads the latest release, verifies the checksum, installs step to `~/.stepcode/bin`, and updates your PATH; reopen your terminal and you are done\.
-
-**macOS / Linux / WSL**
+The supported installation path for this private repository is from source. You need Git, Node.js 22.19 or newer, and pnpm 9.15.9.
 
 ```bash
-curl -fsSL https://static-openapi.stepfun.com/stepcode/install.sh | bash
+git clone https://github.com/soulwo/Step-Code-custom.git
+cd Step-Code-custom
+corepack enable
+pnpm install --ignore-scripts
+pnpm run build:offline
+pnpm step
 ```
 
-**Windows \(PowerShell\)**
+The offline build uses the model data already included in the repository. To download fresh model data and perform an online build, run `pnpm run build` instead.
 
-```powershell
-irm https://static-openapi.stepfun.com/stepcode/install.ps1 | iex
-```
-
-- Windows PowerShell support is currently in beta; on Windows, we recommend installing in WSL
-
-- Installer flags: `--version <vX.Y.Z|latest>` installs a specific version; `--install-dir <path>` overrides the install directory
-
-- Verify the installation in a fresh terminal:
+From the source tree, use `pnpm step` wherever an installed CLI would use `step`:
 
 ```bash
-step --version
-step --help
+pnpm step --version
+pnpm step --help
 ```
-
-Upgrade later with `step update`\.
-
-On macOS/Linux/WSL, installation and upgrades also prepare StepPage, which requires
-Node.js 20 or newer on PATH. If StepPage setup fails, Step remains usable and retries
-on the next session. Run `step mcp prepare` to retry setup manually.
 
 ## Sign in to the Step provider
 
-The default Step Code entrypoint exposes one built-in model provider: **Step (StepFun)**. The profiles below select the Step service region and billing method; they are not separate providers.
+The default entrypoint exposes one built-in model provider: **Step (StepFun)**. These profiles select the service region and billing method; they are not separate providers.
 
-| Profile                                                                          | Credential                                                                                    | Billing                                           |
-| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| Step Plan (CN, [platform.stepfun.com](https://platform.stepfun.com/step-plan))   | Browser OAuth; credentials refresh automatically                                              | Usage included with Mini / Plus / Pro / Max plans |
-| Step Plan Oversea ([platform.stepfun.ai](https://platform.stepfun.ai/step-plan)) | Browser OAuth; credentials refresh automatically                                              | Usage included with Mini / Plus / Pro / Max plans |
-| Step Platform (CN)                                                               | API key from [platform.stepfun.com/interface-key](https://platform.stepfun.com/interface-key) | Pay per request                                   |
-| Step Platform Oversea                                                            | API key from [platform.stepfun.ai/interface-key](https://platform.stepfun.ai/interface-key)   | Pay per request                                   |
+| Profile | Credential | Billing |
+| --- | --- | --- |
+| Step Plan (CN, [platform.stepfun.com](https://platform.stepfun.com/step-plan)) | Browser OAuth with automatic refresh | Usage included with Mini / Plus / Pro / Max plans |
+| Step Plan Oversea ([platform.stepfun.ai](https://platform.stepfun.ai/step-plan)) | Browser OAuth with automatic refresh | Usage included with Mini / Plus / Pro / Max plans |
+| Step Platform (CN) | API key from [platform.stepfun.com/interface-key](https://platform.stepfun.com/interface-key) | Pay per request |
+| Step Platform Oversea | API key from [platform.stepfun.ai/interface-key](https://platform.stepfun.ai/interface-key) | Pay per request |
 
-Inside the TUI, `/login` opens the Step sign-in flow; from a shell, run `step login`. For API-key access, set `STEP_API_KEY=<your_step_api_key>` or enter the key in `/login`; headless runs can also pass `--api-key <your_step_api_key>`.
+Inside the TUI, `/login` opens the sign-in flow; from a shell, run `step login`. For API-key access, set `STEP_API_KEY=<your_step_api_key>`, enter the key in `/login`, or pass `--api-key <your_step_api_key>` to a headless run.
 
-`/status` shows the current session and model status. Use `step login status` (or `step login status --json`) to check the Step credential and its validity. Stored credentials live in `~/.stepcode/auth.json` with mode `0600`; `/logout` clears the Step credential. After sign-in, `/model` lists the models discovered from the active Step endpoint.
+`/status` shows session and model status. Use `step login status` or `step login status --json` to check the credential. Stored credentials live in `~/.stepcode/auth.json`; `/logout` clears the Step credential. After sign-in, `/model` lists models discovered from the active endpoint. A fresh model catalog is loaded from cache at startup and refreshed in the background.
 
 ## Getting started
 
-Change into your project directory:
+Change into a project directory:
 
 ```bash
 cd /path/to/your/project
@@ -88,124 +71,114 @@ step
 Describe the task in the TUI, or submit one at launch:
 
 ```bash
-step -p "What is the tech stack of this project? What is each directory responsible for? How do I run it locally?"
+step -p "Inspect this project's structure and explain how to run it locally."
 ```
 
-Run `/init` to generate an `AGENTS.md` project guide; an existing `CLAUDE.md` is used as\-is\.
+Run `/init` to generate an `AGENTS.md` project guide. An existing `CLAUDE.md` is used as-is.
 
-| Entry           | Command         | Use case                                                 |
-| --------------- | --------------- | -------------------------------------------------------- |
-| Interactive TUI | `step`          | Exploring code, ongoing conversations, reviewing changes |
-| Headless        | `step -p "..."` | Scripts, CI, batch jobs                                  |
+| Entry | Command | Use case |
+| --- | --- | --- |
+| Interactive TUI | `step` | Exploring code, ongoing conversations, reviewing changes |
+| Headless | `step -p "..."` | Scripts, CI, and batch jobs |
 
 ### Examples
 
-Start the TUI in any project and enter:
+Read-only inspection:
 
 ```text
-What is the tech stack of this project? What is each directory responsible for? How do I run it locally? Don't modify any files yet.
+Inspect the main execution path and test setup. Do not modify any files.
 ```
 
-Then one that makes changes:
+A change with verification:
 
 ```text
-Create a reference table for the error codes in src/api/errors.ts (code, meaning, trigger scenario) and save it to docs/errors.md
+Review the current API error handling, fix the confirmed defects, and run the relevant tests.
 ```
 
-### Ultracode: multi-agent workflows
-
-Use Ultracode to opt into multi-agent workflow orchestration for one task or for the current session. When workflows are available, enter these commands in the interactive TUI:
-
-| Command | Effect |
-| --- | --- |
-| `/ultracode on` | Enable workflow orchestration for the session |
-| `/ultracode off` | Turn off session mode |
-| `/ultracode status` | Show the current session mode |
-| `/ultracode help` | Show usage and the current session mode |
-| `/ultracode` | Same as `help`; leaves the mode unchanged |
-
-`/ultraloop` is an exact alias with the same `on`, `off`, `status`, and `help` subcommands; both names control the same mode. The editor completes these subcommands. Bare commands, `help`, and `status` leave the mode unchanged.
-
-While enabled, the status line shows `Ultracode on`. Session mode stays on across turns until `/ultracode off` or a session boundary, when it resets to off.
-
-For one turn, send `ultracode: <task>` (or `ultraloop: <task>`) in the TUI or as a launch prompt:
+Multi-agent execution for one turn:
 
 ```bash
 step -p "ultracode: Review the API changes and verify the tests"
 ```
 
-If the commands are missing, check `STEP_DISABLE_WORKFLOW` and whether the host enables workflow support. A restricted tool profile must also expose `workflow`; the session switch does not expand tool access.
-
-The prompt prefix opts in only that turn and leaves session mode unchanged. Workflow availability and tool discovery alone do not grant consent to run workflows. Ultracode leaves tool permissions and model thinking settings unchanged. See the [workflow lifecycle](docs/orchestration-lifecycle.md) for opt-in and budget scope.
+Session-wide workflow controls are available through `/ultracode on`, `/ultracode off`, `/ultracode status`, and `/ultracode help`. `/ultraloop` is an exact alias. Workflow availability still depends on host and tool permissions.
 
 ### Resume a session
 
 ```bash
 step -c   # Continue the most recent session
-step -r   # Browse session history and pick one to resume
+step -r   # Browse session history and choose one
 ```
 
-Inside the TUI, `/resume` finds past sessions and `/hotkeys` lists all shortcuts\.
+Inside the TUI, `/resume` finds previous sessions and `/hotkeys` lists shortcuts.
 
 ### Common shortcuts
 
-| Key                                    | Action                                                                             |
-| -------------------------------------- | ---------------------------------------------------------------------------------- |
-| `Enter`                                | Send message                                                                       |
-| `Shift+Enter` / `Ctrl+J` / `Alt+Enter` | Newline                                                                            |
-| `Enter`                                | Queue a message while streaming \(delivered after the current tool call finishes\) |
-| `@`                                    | Reference a project file                                                           |
-| `!command`                             | Run a shell command and hand the output to the model                               |
-| `Shift+Tab`                            | Cycle permission mode                                                              |
-| `Ctrl+O`                               | Toggle tool output                                                                 |
-| `Esc`                                  | Interrupt the running task                                                         |
+| Key | Action |
+| --- | --- |
+| `Enter` | Send a message, or queue it while a response is streaming |
+| `Shift+Enter` / `Ctrl+J` / `Alt+Enter` | Insert a newline |
+| `@` | Reference a project file |
+| `!command` | Run a shell command and provide its output to the model |
+| `Shift+Tab` | Cycle permission mode |
+| `Ctrl+O` | Toggle tool output |
+| `Esc` | Interrupt the running task |
+
+## Custom configuration
+
+Local customization primitives are exposed through `@step-harness/custom` and `@step-harness/custom/node`. See [packages/custom/README.md](packages/custom/README.md) for the extension and merge contract.
+
+For a local JSON configuration, set `STEPCODE_CUSTOM_CONFIG` to the file path before starting the CLI:
+
+```json
+{
+  "streamingParseIntervalMs": 24,
+  "streamingParseMinChars": 128,
+  "findStatConcurrency": 32,
+  "sessionScanConcurrency": 8,
+  "modelCatalogTtlMs": 300000,
+  "suppressedWarningPatterns": ["SQLite"]
+}
+```
+
+Set `streamingParseIntervalMs` to `0` for eager intermediate parsing, or `modelCatalogTtlMs` to `0` to force a startup catalog refresh.
 
 ## Migrate from other agents
 
-- **MCP config**: Claude Code / Codex MCP configuration is imported automatically on first launch; source files are never modified, the import is idempotent, and secrets are never inlined\.
+- **MCP configuration** — supported Claude Code and Codex MCP configuration can be imported on first launch without modifying the source files or inlining secrets.
+- **Plugins** — compatible Claude Code plugins can be managed through `/plugin`.
+- **Project guides** — an existing `CLAUDE.md` remains usable; `/init` generates the equivalent `AGENTS.md`.
 
-- **Plugins**: most Claude Code plugins work as\-is, managed via `/plugin`\.
+## Build and verification
 
-- **Project guides**: an existing `CLAUDE.md` is used as\-is; `/init` generates the equivalent `AGENTS.md`\.
-
-## Build from source
-
-Developing Step Code or running from this repository requires Git, Node\.js, and pnpm:
+After changing the source:
 
 ```bash
-git clone https://github.com/stepfun-ai/Step-Code.git
-cd Step-Code
-pnpm install --ignore-scripts
-pnpm run build
-pnpm step
+pnpm run build:offline
+pnpm run check
+./test.sh
 ```
 
-When running from the source tree, replace `step` with `pnpm step`\.
+The full test script isolates user credentials and temporary resources. Some platform-specific suites may require Bash, Git, or symlink permission on Windows; report environment limitations separately from code failures.
 
 ## Security
 
-- Three permission tiers \(Ask / Approve for Me / Full Access\), cycled with `Shift+Tab`; dangerous commands require a separate confirmation dialog in Ask and Approve for Me, and run without one only in Full Access after its risk acknowledgment\.
+Permission tiers are **Ask**, **Approve for Me**, and **Full Access**, cycled with `Shift+Tab`. Review tool calls and use the least permissive mode suitable for the task. Read [SECURITY.md](SECURITY.md) before reporting a vulnerability or loading third-party extensions.
 
 ## Uninstall
 
-Make sure no step sessions are running before you uninstall\.
+For a source installation, close running sessions and remove the cloned repository. Local configuration, credentials, sessions, and logs are stored under `~/.stepcode`; remove that directory only when you no longer need them.
 
-**Remove the binary**: delete the step executable from the install directory \(default `~/.stepcode/bin`\)\. The installer appends a PATH block marked `# stepcode` to your shell config; removing that block completes the uninstall \(zsh: `~/.zshrc`, bash: `~/.bashrc`, fish: the `fish_add_path` config\)\.
+## Docs and community
 
-**Remove user data \(optional\)**: everything lives under `~/.stepcode` \(config, credentials, sessions, logs\); delete the directory to remove all Step Code data:
+- [Customization guide](packages/custom/README.md)
+- [Development guide](docs/development.md)
+- [Contribution guide](contribute.md)
+- [Issues](https://github.com/soulwo/Step-Code-custom/issues)
+- [Upstream repository](https://github.com/stepfun-ai/Step-Code), used only for tracking upstream changes
 
-```bash
-rm -rf ~/.stepcode
-```
-
-## Docs \& community
-
-- Quick start · Interaction \& input · Platforms \& models · All docs \(links finalized at release\)
-
-- Contributing · \[Report a bug / request a feature\]\(issues link added at release\) · Report a security issue
-
-- When filing an issue, include `step --version`, reproduction steps, and how you run Step Code; strip credentials and private project content first\.
+When filing an issue, include `step --version`, the commit SHA, reproduction steps, and the command used. Remove credentials and private project content first.
 
 ## License
 
-Released under the MIT license; see LICENSE\.
+Released under the MIT license; see [LICENSE](LICENSE).

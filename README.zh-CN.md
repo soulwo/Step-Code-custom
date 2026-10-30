@@ -1,181 +1,184 @@
-# Step Code Readme
+# Step Code Custom
 
 <p align="center">
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-![test.jpg](https://static-openapi.stepfun.com/resource/test.jpg)
-
-<h3><strong>迅捷执行，长程可靠，token 更省。</strong></h3>
+**独立维护的终端编程助手：定制代码隔离、本地状态可靠、运行开销可控。**
 
 ---
 
-Step Code 运行于终端，单轮任务即可完成代码阅读、修改与测试验证的完整闭环。它与 Step（StepFun）provider 深度协同，登录后从 Step 服务发现可用模型。MCP 工具、Agent Skills、插件与多代理编排开箱即用；长任务可通过 /goal 托管，由 Step Code 持续自主推进。
+Step Code Custom 是一个独立维护的私有终端编程助手，支持代码阅读与修改、命令和测试执行、会话恢复，以及交互式和无界面两种使用方式。项目保留原有 `step` 命令和配置格式，现有工作流无需因本次定制而改变。
 
-Step Code 内置 [StepPage](https://platform.stepfun.com/docs/zh/step-code/reference/steppage) 发布能力：本地页面构建完成后，只需一条命令即可发布为可访问的静态网站，让开发、调试与交付在同一个终端中完成。
+本仓库由 [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom) 维护，不是上游项目的官方发布页，也不提供上游官方安装器。
 
-![StepPage 发布能力演示](https://github.com/user-attachments/assets/66843695-3c77-4b26-bd2c-4cd2397a98bf)
+## 项目特性
 
-## Why Step Code
-
-- **token 效率**——与阶跃模型深度协同，同等任务消耗更少 token；长任务拆分为子代理并行执行，子代理持有独立上下文，冗余内容不进入主对话。
-
-- **静态网站发布**——内置 steppage 插件，一条指令将本地目录发布为可分享的静态网址，并支持版本管理与回滚。
-
-- **长任务托管**——`/goal` 将目标交由 Step Code 持续自主推进，`/cron` 按计划定时执行；状态行实时显示活跃任务计时。
-
-- **Step provider 接入**——支持 Step Plan 订阅和 Step Platform API Key；登录后可在 `/model` 中切换 Step 返回的模型。
-
-- **生态兼容**——MCP 服务器与 Agent Skills 开箱即用，Claude Code 插件多数直接兼容。
+- **完整编程闭环**：在交互式 TUI 中检查仓库、修改文件、执行工具并验证结果，也可通过 `step -p` 用于自动化任务。
+- **Step provider 接入**：支持 Step Plan 账号登录和 Step Platform API Key，并可切换当前 Step endpoint 返回的模型。
+- **长任务与多代理**：通过 `/goal` 管理持续目标，通过 `/cron` 定时执行，通过 `/ultracode` 或 `/ultraloop` 启用多代理工作流。
+- **扩展生态**：支持 MCP 服务器、Agent Skills、插件及兼容的 Claude Code 扩展。
+- **StepPage 集成**：配置且服务可用时，沿用现有 StepPage 能力发布本地页面。
+- **定制逻辑隔离**：本地策略和工具集中在 `packages/custom`，避免散落在上游核心模块。
+- **可靠性与性能改进**：关键状态原子写入、文件与会话 I/O 限流、流式 JSON 中间解析限频，以及模型目录缓存和后台刷新。
 
 ## 安装
 
-按操作系统选择官方安装器。安装器会下载最新版本、校验 checksum，把 step 安装到 `~/.stepcode/bin` 并写入 PATH；重开终端即可使用。
-
-**macOS / Linux / WSL**
+本私有仓库目前通过源码安装。需要 Git、Node.js 22.19 或更高版本，以及 pnpm 9.15.9。
 
 ```bash
-curl -fsSL https://static-openapi.stepfun.com/stepcode/install.sh | bash
+git clone https://github.com/soulwo/Step-Code-custom.git
+cd Step-Code-custom
+corepack enable
+pnpm install --ignore-scripts
+pnpm run build:offline
+pnpm step
 ```
 
-**Windows（PowerShell）**
+离线构建使用仓库已有的模型数据。需要下载最新模型数据时，改用 `pnpm run build`。
 
-```powershell
-irm https://static-openapi.stepfun.com/stepcode/install.ps1 | iex
-```
-
-- Windows PowerShell 支持目前为 beta，Windows 上推荐在 WSL 中安装使用
-
-- 安装器参数：`--version <vX.Y.Z|latest>` 装指定版本，`--install-dir <路径>` 自定义安装目录
-
-- 重新打开终端后验证安装：
+在源码目录中，将安装版命令里的 `step` 替换为 `pnpm step`：
 
 ```bash
-step --version
-step --help
+pnpm step --version
+pnpm step --help
 ```
-
-之后用 `step update` 升级到最新版本。
 
 ## 登录 Step provider
 
-当前版本的默认产品入口只内置一个模型 provider：**Step（StepFun）**。下面四种入口只是同一 provider 的不同区域和计费方式，不是四个不同 provider。
+默认入口内置一个模型 provider：**Step（StepFun）**。以下入口只代表不同区域和计费方式，不是不同 provider。
 
-| 入口                                                                                    | 鉴权方式                                                                                         | 计费                                 |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------ |
-| Step Plan（国内，[platform.stepfun.com](https://platform.stepfun.com/step-plan)）       | 浏览器 OAuth，凭据自动刷新                                                                       | Mini / Plus / Pro / Max 订阅内含用量 |
-| Step Plan Oversea（海外，[platform.stepfun.ai](https://platform.stepfun.ai/step-plan)） | 浏览器 OAuth，凭据自动刷新                                                                       | Mini / Plus / Pro / Max 订阅内含用量 |
-| Step Platform（国内）                                                                   | 从 [platform.stepfun.com/interface-key](https://platform.stepfun.com/interface-key) 获取 API Key | 按请求计费                           |
-| Step Platform Oversea（海外）                                                           | 从 [platform.stepfun.ai/interface-key](https://platform.stepfun.ai/interface-key) 获取 API Key   | 按请求计费                           |
+| 入口 | 鉴权方式 | 计费 |
+| --- | --- | --- |
+| Step Plan（国内，[platform.stepfun.com](https://platform.stepfun.com/step-plan)） | 浏览器 OAuth，凭据自动刷新 | Mini / Plus / Pro / Max 订阅内含用量 |
+| Step Plan Oversea（海外，[platform.stepfun.ai](https://platform.stepfun.ai/step-plan)） | 浏览器 OAuth，凭据自动刷新 | Mini / Plus / Pro / Max 订阅内含用量 |
+| Step Platform（国内） | 从 [platform.stepfun.com/interface-key](https://platform.stepfun.com/interface-key) 获取 API Key | 按请求计费 |
+| Step Platform Oversea（海外） | 从 [platform.stepfun.ai/interface-key](https://platform.stepfun.ai/interface-key) 获取 API Key | 按请求计费 |
 
-在 TUI 中输入 `/login` 会打开 Step 登录流程；在 shell 中运行 `step login` 也可以启动登录。使用 API Key 时，设置 `STEP_API_KEY=<your_step_api_key>`，或在 `/login` 中输入；无交互运行也可以传入 `--api-key <your_step_api_key>`。
+在 TUI 中输入 `/login` 启动登录流程，也可在 shell 中运行 `step login`。使用 API Key 时，可设置 `STEP_API_KEY=<your_step_api_key>`、在 `/login` 中输入，或在无界面运行时传入 `--api-key <your_step_api_key>`。
 
-`/status` 查看当前会话和模型状态。使用 `step login status`（或 `step login status --json`）检查 Step 凭据及其有效性。凭据保存在 `~/.stepcode/auth.json`（权限 `0600`）；`/logout` 清除 Step 凭据。登录后，`/model` 会列出当前 Step endpoint 返回的可用模型。
+`/status` 用于查看会话和模型状态；`step login status` 或 `step login status --json` 用于检查凭据。凭据保存在 `~/.stepcode/auth.json`，`/logout` 用于清除。登录后，`/model` 显示当前 endpoint 返回的模型。新鲜模型目录在启动时直接使用，并在后台刷新。
 
 ## 上手
 
-进入要处理的项目目录：
+进入项目目录：
 
 ```bash
 cd /path/to/your/project
 step
 ```
 
-在 TUI 中描述任务，也可以在启动时直接提交：
+在 TUI 中描述任务，或启动时直接提交：
 
 ```bash
-step -p "What is the tech stack of this project? What is each directory responsible for? How do I run it locally?"
+step -p "检查这个项目的结构，并说明如何在本地运行。"
 ```
 
-用 `/init` 生成 `AGENTS.md` 项目指引；已有的 CLAUDE\.md 直接生效，无需重写。
+使用 `/init` 生成 `AGENTS.md` 项目指引；已有 `CLAUDE.md` 可直接使用。
 
-| 入口       | 命令            | 适用场景                     |
-| ---------- | --------------- | ---------------------------- |
-| 交互式 TUI | `step`          | 探索代码、持续对话、审阅修改 |
-| Headless   | `step -p "..."` | 脚本、CI、批处理             |
+| 入口 | 命令 | 适用场景 |
+| --- | --- | --- |
+| 交互式 TUI | `step` | 探索代码、持续对话、审阅修改 |
+| 无界面 | `step -p "..."` | 脚本、CI 和批处理 |
 
 ### 示例
 
-在任意项目里启动 TUI，输入：
+只读检查：
 
 ```text
-What is the tech stack of this project? What is each directory responsible for? How do I run it locally? Don't modify any files yet.
+检查主要执行链和测试结构，不要修改任何文件。
 ```
 
-再试一个包含修改的示例：
+修改并验证：
 
 ```text
-Create a reference table for the error codes in src/api/errors.ts (code, meaning, trigger scenario) and save it to docs/errors.md
+检查当前 API 错误处理，修复已确认的问题，并运行相关测试。
 ```
+
+单轮多代理执行：
+
+```bash
+step -p "ultracode: Review the API changes and verify the tests"
+```
+
+会话级工作流可使用 `/ultracode on`、`/ultracode off`、`/ultracode status` 和 `/ultracode help` 控制；`/ultraloop` 是等价别名。工作流是否可用仍取决于宿主和工具权限。
 
 ### 恢复会话
 
 ```bash
-step -c   # Continue the most recent session
-step -r   # Browse session history and pick one to resume
+step -c   # 继续最近一次会话
+step -r   # 浏览历史会话并选择
 ```
 
-TUI 内输入 `/resume` 查找历史会话，`/hotkeys` 查看完整快捷键。
+TUI 内使用 `/resume` 查找历史会话，使用 `/hotkeys` 查看快捷键。
 
 ### 常用快捷键
 
-| 快捷键                                 | 操作                                             |
-| -------------------------------------- | ------------------------------------------------ |
-| `Enter`                                | 发送消息                                         |
-| `Shift+Enter` / `Ctrl+J` / `Alt+Enter` | 换行                                             |
-| `Enter`                                | 流式输出期间排队插话（当前轮工具执行完自动送达） |
-| `@`                                    | 引用项目文件                                     |
-| `!命令`                                | 直接执行 Shell 命令并把输出交给模型              |
-| `Shift+Tab`                            | 循环权限模式                                     |
-| `Ctrl+O`                               | 折叠 / 展开工具输出                              |
-| `Esc`                                  | 中断正在运行的任务                               |
+| 快捷键 | 操作 |
+| --- | --- |
+| `Enter` | 发送消息；流式输出时排队 |
+| `Shift+Enter` / `Ctrl+J` / `Alt+Enter` | 换行 |
+| `@` | 引用项目文件 |
+| `!命令` | 执行 Shell 命令并将输出提供给模型 |
+| `Shift+Tab` | 循环权限模式 |
+| `Ctrl+O` | 折叠或展开工具输出 |
+| `Esc` | 中断当前任务 |
+
+## 自定义配置
+
+本地定制能力通过 `@step-harness/custom` 和 `@step-harness/custom/node` 提供，扩展与合并约定见 [packages/custom/README.md](packages/custom/README.md)。
+
+使用 JSON 配置时，在启动前将 `STEPCODE_CUSTOM_CONFIG` 指向配置文件：
+
+```json
+{
+  "streamingParseIntervalMs": 24,
+  "streamingParseMinChars": 128,
+  "findStatConcurrency": 32,
+  "sessionScanConcurrency": 8,
+  "modelCatalogTtlMs": 300000,
+  "suppressedWarningPatterns": ["SQLite"]
+}
+```
+
+将 `streamingParseIntervalMs` 设为 `0` 可恢复每个中间块都解析；将 `modelCatalogTtlMs` 设为 `0` 可强制启动时刷新模型目录。
 
 ## 从其他 Agent 迁移
 
-- **MCP 配置**：首次启动检测到 Claude Code / Codex 的 MCP 配置时自动导入；源文件只读、可重复执行、密钥不落明文。
+- **MCP 配置**：可导入支持的 Claude Code 和 Codex MCP 配置，不修改源文件，也不把密钥内联。
+- **插件**：兼容的 Claude Code 插件可通过 `/plugin` 管理。
+- **项目指引**：已有 `CLAUDE.md` 可直接使用，`/init` 可生成对应的 `AGENTS.md`。
 
-- **插件**：Claude Code 插件多数直接可用，`/plugin` 里统一管理。
+## 构建与验证
 
-- **项目指引**：已有的 CLAUDE\.md 直接生效，`/init` 可生成等价的 AGENTS\.md。
-
-## 从源码构建
-
-开发 Step Code 或运行本仓库源码需要 Git、Node\.js 与 pnpm：
+修改源码后运行：
 
 ```bash
-git clone https://github.com/stepfun-ai/Step-Code.git
-cd Step-Code
-pnpm install --ignore-scripts
-pnpm run build
-pnpm step
+pnpm run build:offline
+pnpm run check
+./test.sh
 ```
 
-从源码目录运行时，把示例中的 `step` 替换为 `pnpm step`。
+完整测试脚本会隔离用户凭据和临时资源。Windows 下部分测试可能需要 Bash、Git 或 symlink 权限；环境限制应与代码失败分别报告。
 
 ## 安全
 
-- 权限三档（Ask / Approve for Me / Full Access），`Shift+Tab` 循环切换；危险命令在 Ask 和 Approve for Me 下都会单独弹窗确认，只有 Full Access 在风险确认后不再拦截。
+权限分为 **Ask**、**Approve for Me** 和 **Full Access**，通过 `Shift+Tab` 切换。请审阅工具调用，并选择满足任务需要的最低权限。加载第三方扩展或报告漏洞前，请阅读 [SECURITY.md](SECURITY.md)。
 
 ## 卸载
 
-确认没有正在运行的 step 会话，再执行卸载。
-
-**移除程序**：删除安装目录中的 step 可执行文件（默认 `~/.stepcode/bin`）。安装器写入 PATH 时会在 shell 配置里追加带 `# stepcode` 标记的 PATH 块，卸载时把该标记块整段删除即可（zsh 用 `~/.zshrc`，bash 用 `~/.bashrc` 等，fish 用 `fish_add_path` 对应配置）。
-
-**可选：删除用户数据**：本地数据统一在 `~/.stepcode`（配置、凭据、会话、日志），确认不再需要后删除整个目录即可回到全新状态：
-
-```bash
-rm -rf ~/.stepcode
-```
+源码安装可直接删除克隆目录，删除前请关闭正在运行的会话。配置、凭据、会话和日志默认位于 `~/.stepcode`；只有确认不再需要这些数据时，才删除该目录。
 
 ## 文档与社区
 
-- 快速开始 · 交互与输入 · 平台与模型 · 全部文档（链接发布日对齐 docs 目录）
+- [定制指南](packages/custom/README.md)
+- [开发指南](docs/development.md)
+- [贡献指南](contribute.md)
+- [问题反馈](https://github.com/soulwo/Step-Code-custom/issues)
+- [上游仓库](https://github.com/stepfun-ai/Step-Code)，仅用于跟踪上游更新
 
-- 贡献指南 · \[报告 Bug / 提出建议\]\(issues 链接发布日填\) · 报告安全问题
-
-- 提 Issue 请附上 `step --version`、复现步骤与运行入口；凭据和私人项目内容请先抹掉。
+提交 Issue 时，请附上 `step --version`、提交 SHA、复现步骤和运行命令，并先删除凭据和私人项目内容。
 
 ## 许可
 
-本项目以 MIT 许可发布，详见 LICENSE。
+本项目以 MIT 许可发布，详见 [LICENSE](LICENSE)。
