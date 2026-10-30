@@ -1363,9 +1363,11 @@ test("idle keep-alive children are stopped after the TTL and a reply resumes qui
 		 * virtual budget instead, and report what did arrive.
 		 */
 		const settle = async (count: number): Promise<boolean> => {
-			for (let i = 0; i < 500; i += 1) {
+			for (let i = 0; i < 5_000; i += 1) {
 				if (sent.filter((m) => m.details?.event === "background_done").length >= count) return true;
 				await vi.advanceTimersByTimeAsync(10);
+				// Disk notifications need real event-loop turns as well as virtual time.
+				await new Promise<void>((resolve) => setImmediate(resolve));
 			}
 			return false;
 		};

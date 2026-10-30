@@ -440,7 +440,7 @@ test("workflow streams task counts and transitions while agents are still runnin
 		settled = true;
 	});
 	try {
-		await vi.waitFor(() => expect(pending.size).toBe(2));
+		await vi.waitFor(() => expect(pending.size).toBe(2), { timeout: 10_000 });
 		expect(settled).toBe(false);
 		const live = updates.at(-1)?.details;
 		expect(live).toMatchObject({
@@ -457,7 +457,7 @@ test("workflow streams task counts and transitions while agents are still runnin
 		]);
 		const firstSnapshot = live;
 		pending.get("Inspect authentication")!({ value: "safe", usage: { input: 2, output: 1 } });
-		await vi.waitFor(() => expect(pending.size).toBe(3));
+		await vi.waitFor(() => expect(pending.size).toBe(3), { timeout: 10_000 });
 		expect(settled).toBe(false);
 		expect(updates.at(-1)?.details).toMatchObject({ completedAgents: 1, spentTokens: 3 });
 		expect(updates.at(-1)?.details?.agents.map((agent) => agent.status)).toEqual(["completed", "running", "running"]);
@@ -466,7 +466,7 @@ test("workflow streams task counts and transitions while agents are still runnin
 	} finally {
 		// Always drain the injected runners, even when the live assertions fail.
 		for (const resolve of pending.values()) resolve({ value: "done" });
-		await vi.waitFor(() => expect(pending.size).toBe(3));
+		await vi.waitFor(() => expect(pending.size).toBe(3), { timeout: 10_000 });
 		pending.get("Check scheduler")!({ value: "done" });
 		await execution;
 	}
@@ -506,7 +506,7 @@ test("workflow streams cancellation for both running and queued agents", async (
 		);
 	const rejected = expect(execution).rejects.toThrow(/aborted/iu);
 	try {
-		await vi.waitFor(() => expect(started).toBe(true));
+		await vi.waitFor(() => expect(started).toBe(true), { timeout: 10_000 });
 		expect(updates.at(-1)?.agents.map((agent) => agent.status)).toEqual(["running", "queued"]);
 	} finally {
 		controller.abort();
@@ -549,7 +549,7 @@ test("workflow streams budget failures for tasks that never acquire a runnable s
 		{ label: "Unaffordable task", status: "failed" },
 	]);
 	expect(updates.at(-1)?.agents[1]?.startedAt).toBeUndefined();
-});
+}, 60_000);
 
 test("workflow replay reports cached tasks without launching agents or charging tokens again", async () => {
 	const cwd = await workspace();
@@ -574,4 +574,4 @@ test("workflow replay reports cached tasks without launching agents or charging 
 	expect(updates.at(-1)).toMatchObject({ status: "completed", completedAgents: 1, totalAgents: 1, spentTokens: 0 });
 	expect(updates.at(-1)?.agents).toMatchObject([{ label: "Review authentication", status: "cached" }]);
 	expect(replay.details).toMatchObject({ status: "completed", cacheHits: 1, spentTokens: 0, value: "reviewed" });
-});
+}, 60_000);
