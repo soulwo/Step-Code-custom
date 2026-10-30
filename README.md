@@ -8,7 +8,7 @@
 
 ---
 
-Step Code Custom is an independently maintained, private build of a terminal coding agent. It reads and modifies code, runs commands and tests, resumes sessions, and supports interactive or headless workflows. The original `step` command and existing configuration formats are preserved so current workflows continue to work.
+Step Code Custom is an independently maintained, private, customized downstream build based on [stepfun-ai/Step-Code](https://github.com/stepfun-ai/Step-Code). It preserves the upstream terminal coding-agent workflow while adding isolated local customization, reliability fixes, and performance improvements. It reads and modifies code, runs commands and tests, resumes sessions, and supports interactive or headless workflows. The original `step` command and existing configuration formats are preserved so current workflows continue to work.
 
 This repository is owned and maintained at [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom). It is not the upstream project's release page, and it does not publish official upstream installers.
 

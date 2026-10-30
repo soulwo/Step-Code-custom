@@ -8,7 +8,7 @@
 
 ---
 
-Step Code Custom 是一个独立维护的私有终端编程助手，支持代码阅读与修改、命令和测试执行、会话恢复，以及交互式和无界面两种使用方式。项目保留原有 `step` 命令和配置格式，现有工作流无需因本次定制而改变。
+Step Code Custom 是基于上游 [stepfun-ai/Step-Code](https://github.com/stepfun-ai/Step-Code) 开发的独立维护、私有、自定义下游版本。在保留上游终端编程助手工作流的基础上，加入隔离的本地定制、可靠性修复和性能优化。项目支持代码阅读与修改、命令和测试执行、会话恢复，以及交互式和无界面两种使用方式，并保留原有 `step` 命令和配置格式，现有工作流无需因本次定制而改变。
 
 本仓库由 [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom) 维护，不是上游项目的官方发布页，也不提供上游官方安装器。
 
