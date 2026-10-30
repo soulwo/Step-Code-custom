@@ -1,16 +1,41 @@
-# Step Code Custom
+<h1 align="center">Step Code Custom</h1>
 
 <p align="center">
-  <a href="README.md">English</a> · <strong>简体中文</strong>
+  <strong>独立维护的终端编程助手：定制代码隔离、本地状态可靠、运行开销可控。</strong>
 </p>
 
-**独立维护的终端编程助手：定制代码隔离、本地状态可靠、运行开销可控。**
+<p align="center">
+  <a href="https://github.com/soulwo/Step-Code-custom"><img src="https://img.shields.io/badge/repository-private-24292f?logo=github&logoColor=white" alt="私有仓库"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/version-0.1.0-2563eb" alt="版本 0.1.0"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=node.js&logoColor=white" alt="Node.js 22.19 或更高版本">
+  <img src="https://img.shields.io/badge/pnpm-9.15.9-f69220?logo=pnpm&logoColor=white" alt="pnpm 9.15.9">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT 许可"></a>
+  <a href="https://github.com/stepfun-ai/Step-Code"><img src="https://img.shields.io/badge/upstream-Step--Code-6e56cf" alt="基于 Step-Code"></a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · <strong>简体中文</strong><br>
+  <a href="#终端展示">终端展示</a> ·
+  <a href="#项目特性">项目特性</a> ·
+  <a href="#项目架构">项目架构</a> ·
+  <a href="#安装">安装</a> ·
+  <a href="#自定义配置">自定义配置</a> ·
+  <a href="docs/README.md">文档索引</a>
+</p>
 
 ---
 
 Step Code Custom 是基于上游 [stepfun-ai/Step-Code](https://github.com/stepfun-ai/Step-Code) 开发的独立维护、私有、自定义下游版本。在保留上游终端编程助手工作流的基础上，加入隔离的本地定制、可靠性修复和性能优化。项目支持代码阅读与修改、命令和测试执行、会话恢复，以及交互式和无界面两种使用方式，并保留原有 `step` 命令和配置格式，现有工作流无需因本次定制而改变。
 
 本仓库由 [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom) 维护，不是上游项目的官方发布页，也不提供上游官方安装器。
+
+## 终端展示
+
+<p align="center">
+  <img src="docs/assets/terminal-demo.svg" alt="Step Code Custom 终端展示真实 step --help 输出的精选内容" width="1000">
+</p>
+
+终端图使用 0.1.0 版本真实 `step --help` 输出的精选内容。在源码目录运行 `pnpm step --help` 可查看完整命令说明。
 
 ## 项目特性
 
@@ -21,6 +46,16 @@ Step Code Custom 是基于上游 [stepfun-ai/Step-Code](https://github.com/stepf
 - **StepPage 集成**：配置且服务可用时，沿用现有 StepPage 能力发布本地页面。
 - **定制逻辑隔离**：本地策略和工具集中在 `packages/custom`，避免散落在上游核心模块。
 - **可靠性与性能改进**：关键状态原子写入、文件与会话 I/O 限流、流式 JSON 中间解析限频，以及模型目录缓存和后台刷新。
+
+## 项目架构
+
+<p align="center">
+  <img src="docs/assets/project-architecture.svg" alt="Step Code Custom 简化架构与独立定制层" width="1000">
+</p>
+
+上游运行时保持原有分层：`apps/cli` 负责应用宿主，`packages/coding-agent` 负责编程工作流，`packages/agent-core` 运行 Agent Loop，`packages/providers` 处理模型 API。本地策略通过 `packages/custom` 和小型接入点进入各模块，不在核心代码中重复维护另一套实现。
+
+架构图采用简化视图，省略了 `config`、`tui`、`contracts` 和 `telemetry` 等共享包。包边界与配置细节见[定制指南](docs/customization.md)。
 
 ## 安装
 
@@ -149,6 +184,21 @@ TUI 内使用 `/resume` 查找历史会话，使用 `/hotkeys` 查看快捷键�
 - **插件**：兼容的 Claude Code 插件可通过 `/plugin` 管理。
 - **项目指引**：已有 `CLAUDE.md` 可直接使用，`/init` 可生成对应的 `AGENTS.md`。
 
+## 同步上游更新
+
+当前仓库使用两个远程：`origin` 跟踪 `stepfun-ai/Step-Code`，`custom` 指向私有的 `soulwo/Step-Code-custom`。以下流程将上游更新合并到本地，验证后只推送到私有仓库：
+
+```bash
+git fetch origin
+git merge origin/main
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run build:offline
+pnpm run check
+git push custom main
+```
+
+如有冲突，先解决冲突再执行验证。[上游同步指南](docs/upstream-sync.md)列出了重点冲突区域、中止合并的方法和定制包保留规则。
+
 ## 构建与验证
 
 修改源码后运行：
@@ -171,9 +221,12 @@ pnpm run check
 
 ## 文档与社区
 
-- [定制指南](packages/custom/README.md)
-- [开发指南](docs/development.md)
-- [贡献指南](contribute.md)
+- [文档索引](docs/README.md)：产品、运行时、定制与维护文档
+- [定制指南](docs/customization.md)：默认值、参数校验、包边界和扩展流程
+- [定制包约定](packages/custom/README.md)：公开入口与合并约束
+- [上游同步指南](docs/upstream-sync.md)：私有开发与上游合并流程
+- [开发指南](docs/development.md) · [测试指南](docs/testing.md)
+- [贡献指南](contribute.md) · [安全政策](SECURITY.md)
 - [问题反馈](https://github.com/soulwo/Step-Code-custom/issues)
 - [上游仓库](https://github.com/stepfun-ai/Step-Code)，仅用于跟踪上游更新
 

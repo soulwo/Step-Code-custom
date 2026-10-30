@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Step Code Custom architecture</title>
+  <desc id="desc">Simplified architecture showing the CLI, coding agent, agent core, providers, and the isolated custom package.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#93c5fd"/>
+    </marker>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c4b5fd"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="700" rx="28" fill="url(#bg)"/>
+  <text x="60" y="72" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700">Upstream workflow. Isolated customization.</text>
+  <text x="60" y="106" fill="#a5b4fc" font-family="Segoe UI, Arial, sans-serif" font-size="17">Small call-site adaptations connect local policy without duplicating the core runtime.</text>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="60" y="160" width="250" height="132" rx="16" fill="#172554" stroke="#60a5fa" stroke-width="2"/>
+    <text x="84" y="196" fill="#93c5fd" font-size="14" font-weight="700" letter-spacing="1.5">APPLICATION HOST</text>
+    <text x="84" y="232" fill="#ffffff" font-family="Cascadia Code, Consolas, monospace" font-size="22" font-weight="600">apps/cli</text>
+    <text x="84" y="264" fill="#cbd5e1" font-size="16">argv · startup · TUI · lifecycle</text>
+
+    <rect x="370" y="160" width="290" height="132" rx="16" fill="#172554" stroke="#60a5fa" stroke-width="2"/>
+    <text x="394" y="196" fill="#93c5fd" font-size="14" font-weight="700" letter-spacing="1.5">CODING PRODUCT</text>
+    <text x="394" y="232" fill="#ffffff" font-family="Cascadia Code, Consolas, monospace" font-size="21" font-weight="600">packages/coding-agent</text>
+    <text x="394" y="264" fill="#cbd5e1" font-size="16">sessions · tools · Step integration</text>
+
+    <rect x="720" y="160" width="280" height="132" rx="16" fill="#172554" stroke="#60a5fa" stroke-width="2"/>
+    <text x="744" y="196" fill="#93c5fd" font-size="14" font-weight="700" letter-spacing="1.5">AGENT RUNTIME</text>
+    <text x="744" y="232" fill="#ffffff" font-family="Cascadia Code, Consolas, monospace" font-size="21" font-weight="600">packages/agent-core</text>
+    <text x="744" y="264" fill="#cbd5e1" font-size="16">Agent loop · context · events</text>
+
+    <rect x="720" y="368" width="280" height="132" rx="16" fill="#172554" stroke="#60a5fa" stroke-width="2"/>
+    <text x="744" y="404" fill="#93c5fd" font-size="14" font-weight="700" letter-spacing="1.5">MODEL RUNTIME</text>
+    <text x="744" y="440" fill="#ffffff" font-family="Cascadia Code, Consolas, monospace" font-size="21" font-weight="600">packages/providers</text>
+    <text x="744" y="472" fill="#cbd5e1" font-size="16">Step · API dialects · catalogs</text>
+
+    <line x1="310" y1="226" x2="358" y2="226" stroke="#93c5fd" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="660" y1="226" x2="708" y2="226" stroke="#93c5fd" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="860" y1="292" x2="860" y2="356" stroke="#93c5fd" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="60" y="368" width="600" height="190" rx="18" fill="#2e1065" stroke="#a78bfa" stroke-width="2"/>
+    <text x="86" y="406" fill="#c4b5fd" font-size="14" font-weight="700" letter-spacing="1.5">LOCAL CUSTOMIZATION LAYER</text>
+    <text x="86" y="444" fill="#ffffff" font-family="Cascadia Code, Consolas, monospace" font-size="24" font-weight="600">packages/custom</text>
+    <rect x="86" y="468" width="260" height="62" rx="10" fill="#3b1772"/>
+    <text x="104" y="494" fill="#ede9fe" font-family="Cascadia Code, Consolas, monospace" font-size="16">@step-harness/custom</text>
+    <text x="104" y="517" fill="#c4b5fd" font-size="14">browser-safe primitives</text>
+    <rect x="366" y="468" width="268" height="62" rx="10" fill="#3b1772"/>
+    <text x="384" y="494" fill="#ede9fe" font-family="Cascadia Code, Consolas, monospace" font-size="16">custom/node</text>
+    <text x="384" y="517" fill="#c4b5fd" font-size="14">Node-only helpers</text>
+
+    <path d="M185 368 V326 H185 V304" fill="none" stroke="#c4b5fd" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowPurple)"/>
+    <path d="M515 368 V326 H515 V304" fill="none" stroke="#c4b5fd" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowPurple)"/>
+    <path d="M660 462 H708" fill="none" stroke="#c4b5fd" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowPurple)"/>
+    <text x="84" y="342" fill="#ddd6fe" font-size="14">small call-site adapters</text>
+
+    <rect x="60" y="604" width="1080" height="54" rx="12" fill="#111c36" stroke="#334155"/>
+    <text x="84" y="638" fill="#cbd5e1" font-family="Cascadia Code, Consolas, monospace" font-size="16">origin: stepfun-ai/Step-Code</text>
+    <text x="516" y="638" fill="#93c5fd" font-size="16">→ merge upstream improvements →</text>
+    <text x="894" y="638" fill="#ede9fe" font-family="Cascadia Code, Consolas, monospace" font-size="16">custom: soulwo/Step-Code-custom</text>
+  </g>
+  <text x="60" y="686" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif" font-size="12">Simplified runtime view. Shared packages including config, tui, contracts, and telemetry are omitted.</text>
+</svg>

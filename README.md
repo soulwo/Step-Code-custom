@@ -1,16 +1,41 @@
-# Step Code Custom
+<h1 align="center">Step Code Custom</h1>
 
 <p align="center">
-  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+  <strong>A privately maintained terminal coding assistant with isolated customization, reliable local state, and bounded runtime overhead.</strong>
 </p>
 
-**A privately maintained terminal coding assistant with isolated customization, reliable local state, and bounded runtime overhead.**
+<p align="center">
+  <a href="https://github.com/soulwo/Step-Code-custom"><img src="https://img.shields.io/badge/repository-private-24292f?logo=github&logoColor=white" alt="Private repository"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/version-0.1.0-2563eb" alt="Version 0.1.0"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=node.js&logoColor=white" alt="Node.js 22.19 or newer">
+  <img src="https://img.shields.io/badge/pnpm-9.15.9-f69220?logo=pnpm&logoColor=white" alt="pnpm 9.15.9">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT license"></a>
+  <a href="https://github.com/stepfun-ai/Step-Code"><img src="https://img.shields.io/badge/upstream-Step--Code-6e56cf" alt="Based on Step-Code"></a>
+</p>
+
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a><br>
+  <a href="#terminal-at-a-glance">Terminal</a> ·
+  <a href="#why-step-code-custom">Features</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#installation">Installation</a> ·
+  <a href="#custom-configuration">Customization</a> ·
+  <a href="docs/README.md">Documentation</a>
+</p>
 
 ---
 
 Step Code Custom is an independently maintained, private, customized downstream build based on [stepfun-ai/Step-Code](https://github.com/stepfun-ai/Step-Code). It preserves the upstream terminal coding-agent workflow while adding isolated local customization, reliability fixes, and performance improvements. It reads and modifies code, runs commands and tests, resumes sessions, and supports interactive or headless workflows. The original `step` command and existing configuration formats are preserved so current workflows continue to work.
 
 This repository is owned and maintained at [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom). It is not the upstream project's release page, and it does not publish official upstream installers.
+
+## Terminal at a glance
+
+<p align="center">
+  <img src="docs/assets/terminal-demo.svg" alt="Step Code Custom terminal showing selected real step --help output" width="1000">
+</p>
+
+The terminal illustration uses selected output from the real `step --help` command in version 0.1.0. Run `pnpm step --help` from a source checkout to see the complete command reference.
 
 ## Why Step Code Custom
 
@@ -21,6 +46,16 @@ This repository is owned and maintained at [soulwo/Step-Code-custom](https://git
 - **StepPage integration** — publish local pages through the existing StepPage integration when it is configured and available.
 - **Isolated customization** — local policies and utilities live in `packages/custom` instead of being scattered through upstream modules.
 - **Reliability and performance improvements** — atomic writes for important state files, bounded file and session I/O, throttled intermediate JSON parsing, and model-catalog caching with background refresh.
+
+## Architecture
+
+<p align="center">
+  <img src="docs/assets/project-architecture.svg" alt="Simplified Step Code Custom architecture with an isolated customization layer" width="1000">
+</p>
+
+The upstream runtime remains layered: `apps/cli` hosts the application, `packages/coding-agent` owns coding workflows, `packages/agent-core` runs the agent loop, and `packages/providers` handles model APIs. Local policy enters through small adapters backed by `packages/custom`, rather than a second implementation inside each core module.
+
+The diagram is intentionally simplified; shared packages such as `config`, `tui`, `contracts`, and `telemetry` are omitted. See the [customization guide](docs/customization.md) for package boundaries and configuration details.
 
 ## Installation
 
@@ -149,6 +184,21 @@ Set `streamingParseIntervalMs` to `0` for eager intermediate parsing, or `modelC
 - **Plugins** — compatible Claude Code plugins can be managed through `/plugin`.
 - **Project guides** — an existing `CLAUDE.md` remains usable; `/init` generates the equivalent `AGENTS.md`.
 
+## Sync with upstream
+
+This checkout uses two remotes: `origin` tracks `stepfun-ai/Step-Code`, while `custom` points to the private `soulwo/Step-Code-custom` repository. Bring in upstream changes without publishing private work upstream:
+
+```bash
+git fetch origin
+git merge origin/main
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run build:offline
+pnpm run check
+git push custom main
+```
+
+Resolve any conflicts before running the verification commands. The [upstream synchronization guide](docs/upstream-sync.md) explains conflict hotspots, merge-abort recovery, and the custom-package preservation rules.
+
 ## Build and verification
 
 After changing the source:
@@ -169,11 +219,14 @@ Permission tiers are **Ask**, **Approve for Me**, and **Full Access**, cycled wi
 
 For a source installation, close running sessions and remove the cloned repository. Local configuration, credentials, sessions, and logs are stored under `~/.stepcode`; remove that directory only when you no longer need them.
 
-## Docs and community
+## Documentation and community
 
-- [Customization guide](packages/custom/README.md)
-- [Development guide](docs/development.md)
-- [Contribution guide](contribute.md)
+- [Documentation index](docs/README.md) — product, runtime, customization, and maintenance guides
+- [Customization guide](docs/customization.md) — defaults, validation, package boundaries, and extension workflow
+- [Customization package contract](packages/custom/README.md) — public entry points and merge constraints
+- [Upstream synchronization](docs/upstream-sync.md) — private development and upstream merge procedure
+- [Development guide](docs/development.md) · [Testing guide](docs/testing.md)
+- [Contribution guide](contribute.md) · [Security policy](SECURITY.md)
 - [Issues](https://github.com/soulwo/Step-Code-custom/issues)
 - [Upstream repository](https://github.com/stepfun-ai/Step-Code), used only for tracking upstream changes
 
