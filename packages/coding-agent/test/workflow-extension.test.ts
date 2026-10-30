@@ -2,9 +2,10 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { AgentToolResult } from "@step-harness/agent-core";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { ExtensionAPI, ExtensionCommandContext, ToolDefinition } from "../src/core/extensions/types.ts";
 import { registerWorkflowChildAcl, WORKFLOW_ACL_ENV } from "../src/features/workflow/acl-extension.ts";
+import { resetWorkflowAdmission } from "../src/features/workflow/admission.ts";
 import { workflowProgressResult } from "../src/features/workflow/rendering.ts";
 import {
 	createStepWorkflowExtension,
@@ -68,7 +69,12 @@ test("nested callback failures name their script in the text channels", () => {
 	]);
 });
 
+beforeEach(() => {
+	resetWorkflowAdmission();
+});
+
 afterEach(async () => {
+	resetWorkflowAdmission();
 	vi.unstubAllEnvs();
 	await Promise.all(cleanups.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
 });
@@ -426,12 +432,13 @@ test("workflow streams task counts and transitions while agents are still runnin
 			return { value, meta: {} };
 		},
 	})(testHarness.api);
+	const controller = new AbortController();
 	const execution = testHarness.tools
 		.get("workflow")!
 		.execute(
 			"live-workflow",
 			{ script: "three tasks" },
-			undefined,
+			controller.signal,
 			(update) => updates.push(update as AgentToolResult<WorkflowProgress>),
 			context(cwd, testHarness.notifications),
 		);
@@ -463,12 +470,15 @@ test("workflow streams task counts and transitions while agents are still runnin
 		expect(updates.at(-1)?.details?.agents.map((agent) => agent.status)).toEqual(["completed", "running", "running"]);
 		expect(firstSnapshot?.completedAgents).toBe(0);
 		expect(firstSnapshot?.agents[0]?.status).toBe("running");
-	} finally {
-		// Always drain the injected runners, even when the live assertions fail.
 		for (const resolve of pending.values()) resolve({ value: "done" });
 		await vi.waitFor(() => expect(pending.size).toBe(3), { timeout: 10_000 });
 		pending.get("Check scheduler")!({ value: "done" });
 		await execution;
+	} finally {
+		// A failed assertion must not retain an active execution or admission lease.
+		controller.abort();
+		for (const resolve of pending.values()) resolve({ value: "done" });
+		await execution.catch(() => undefined);
 	}
 	expect(updates.at(-1)?.details).toMatchObject({ status: "completed", completedAgents: 3, totalAgents: 3 });
 	const finalResult = await execution;
