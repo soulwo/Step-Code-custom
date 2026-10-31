@@ -48,8 +48,31 @@ import { SandboxManager, type SandboxRuntimeConfig } from "@anthropic-ai/sandbox
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { type BashOperations, CONFIG_DIR_NAME, createBashTool, getAgentDir } from "@earendil-works/pi-coding-agent";
 
-interface SandboxConfig extends SandboxRuntimeConfig {
+// Zod 4 cannot infer this dependency's Zod 3 ZodEffects declarations accurately.
+// Preserve the documented runtime shape locally and cast only at the library boundary.
+interface SandboxConfig {
 	enabled?: boolean;
+	network: {
+		allowedDomains: string[];
+		deniedDomains: string[];
+		allowUnixSockets?: string[];
+		allowAllUnixSockets?: boolean;
+		allowLocalBinding?: boolean;
+		httpProxyPort?: number;
+		socksProxyPort?: number;
+	};
+	filesystem: {
+		denyRead: string[];
+		allowWrite: string[];
+		denyWrite: string[];
+		allowGitConfig?: boolean;
+	};
+	ignoreViolations?: Record<string, string[]>;
+	enableWeakerNestedSandbox?: boolean;
+	ripgrep?: { command: string; args?: string[] };
+	mandatoryDenySearchDepth?: number;
+	allowPty?: boolean;
+	seccomp?: { bpfPath?: string; applyPath?: string };
 }
 
 const DEFAULT_CONFIG: SandboxConfig = {
@@ -266,7 +289,7 @@ export default function (pi: ExtensionAPI) {
 				filesystem: config.filesystem,
 				ignoreViolations: configExt.ignoreViolations,
 				enableWeakerNestedSandbox: configExt.enableWeakerNestedSandbox,
-			});
+			} as SandboxRuntimeConfig);
 
 			sandboxEnabled = true;
 			sandboxInitialized = true;

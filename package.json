@@ -73,10 +73,16 @@
 		"overrides": {
 			"protobufjs": "7.6.5",
 			"rimraf": "6.1.2",
-			"gaxios>rimraf": "6.1.2"
+			"gaxios>rimraf": "6.1.2",
+			"shell-quote": "1.11.0",
+			"@modelcontextprotocol/sdk>zod": "4.6.6",
+			"@anthropic-ai/sandbox-runtime>zod": "4.6.6",
+			"qs": "6.16.1",
+			"follow-redirects": "1.16.2",
+			"node-forge": "1.4.1"
 		}
 	},
 	"dependencies": {
-		"smol-toml": "1.8.0"
+		"smol-toml": "1.9.0"
 	}
 }
