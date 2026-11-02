@@ -11,10 +11,13 @@
   <img src="https://img.shields.io/badge/pnpm-9.15.9-f69220?logo=pnpm&logoColor=white" alt="pnpm 9.15.9">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT 许可"></a>
   <a href="https://github.com/stepfun-ai/Step-Code"><img src="https://img.shields.io/badge/upstream-Step--Code-6e56cf" alt="基于 Step-Code"></a>
+  <a href="https://github.com/soulwo/Step-Code-custom/actions/workflows/ci.yml"><img src="https://github.com/soulwo/Step-Code-custom/actions/workflows/ci.yml/badge.svg?branch=main" alt="主 CI"></a>
+  <a href="https://github.com/soulwo/Step-Code-custom/actions/workflows/npm-audit.yml"><img src="https://github.com/soulwo/Step-Code-custom/actions/workflows/npm-audit.yml/badge.svg?branch=main" alt="生产依赖安全审计"></a>
 </p>
 
 <p align="center">
   <a href="README.md">English</a> · <strong>简体中文</strong><br>
+  <a href="#与官方上游的区别">与官方区别</a> ·
   <a href="#终端展示">终端展示</a> ·
   <a href="#项目特性">项目特性</a> ·
   <a href="#项目架构">项目架构</a> ·
@@ -28,6 +31,21 @@
 Step Code Custom 是基于上游 [stepfun-ai/Step-Code](https://github.com/stepfun-ai/Step-Code) 开发的独立维护、私有、自定义下游版本。在保留上游终端编程助手工作流的基础上，加入隔离的本地定制、可靠性修复和性能优化。项目支持代码阅读与修改、命令和测试执行、会话恢复，以及交互式和无界面两种使用方式，并保留原有 `step` 命令和配置格式，现有工作流无需因本次定制而改变。
 
 本仓库由 [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom) 维护，不是上游项目的官方发布页，也不提供上游官方安装器。
+
+## 与官方上游的区别
+
+本仓库持续合并官方上游改进，并在此基础上维护以下定制。表中“上游基线”用于说明接入位置，不代表对上游所有版本的逐项功能评价。
+
+| 维度 | 上游基线 | 本仓库的定制增强 |
+| --- | --- | --- |
+| 定制代码 | 各运行时模块 | 可复用策略集中在 `packages/custom`，通过小型适配器接入 |
+| 状态写入 | 原子替换 | 同时继承原文件权限，并处理 Linux umask，避免重写后权限收窄 |
+| 文件与会话 I/O | 上游调度 | `find_stat` 默认 32 并发，项目会话扫描默认 8 并发 |
+| 流式 JSON 解析 | 上游解析策略 | 默认至少间隔 24ms 且新增 128 字符再解析中间块，最终块始终完整解析 |
+| 模型目录 | 上游刷新策略 | 新鲜缓存默认保留 5 分钟，启动直接使用并在后台刷新 |
+| CLI 构建 | 应用入口 | 保留 `apps/cli`，同时提供 `packages/coding-agent` 的独立 bundle |
+
+这些默认值均可通过 `STEPCODE_CUSTOM_CONFIG` 指向的 JSON 文件调整；字段、校验和恢复方式见[定制指南](docs/customization.md)。
 
 ## 终端展示
 
@@ -96,6 +114,8 @@ pnpm step --help
 `/status` 用于查看会话和模型状态；`step login status` 或 `step login status --json` 用于检查凭据。凭据保存在 `~/.stepcode/auth.json`，`/logout` 用于清除。登录后，`/model` 显示当前 endpoint 返回的模型。新鲜模型目录在启动时直接使用，并在后台刷新。
 
 ## 上手
+
+以下示例中的 `step` 指已经加入 `PATH` 的安装版命令；使用本仓库源码时，请在源码根目录继续将其替换为 `pnpm step`。直接运行 `step` 不会自动选择当前源码目录。
 
 进入项目目录：
 
@@ -179,6 +199,20 @@ TUI 内使用 `/resume` 查找历史会话，使用 `/hotkeys` 查看快捷键�
 
 将 `streamingParseIntervalMs` 设为 `0` 可恢复每个中间块都解析；将 `modelCatalogTtlMs` 设为 `0` 可强制启动时刷新模型目录。
 
+### 自适应上下文配置
+
+在 `~/.stepcode/config.toml` 中设置全局压缩比例，也可按 `provider/model-id` 覆盖单个模型：
+
+```toml
+[compaction]
+triggerRatio = 0.85
+
+[compaction.modelTriggerRatios]
+"provider/model-id" = 0.80
+```
+
+比例有效范围为 `0.50` 到 `0.95`，默认值为 `0.90`。v2 策略还会为小上下文窗口保留下一次响应所需空间。完整配置、绝对 token 上限和 legacy 恢复方式见[自适应上下文管理](docs/context-management.md)。
+
 ## 从其他 Agent 迁移
 
 - **MCP 配置**：可导入支持的 Claude Code 和 Codex MCP 配置，不修改源文件，也不把密钥内联。
@@ -212,9 +246,19 @@ pnpm run check
 
 完整测试脚本会隔离用户凭据和临时资源。Windows 下部分测试可能需要 Bash、Git 或 symlink 权限；环境限制应与代码失败分别报告。
 
+启动性能、冷/热缓存和定制参数的可复现测量方法见[性能验证指南](docs/performance.md)；没有实测数据时不声明具体提速百分比。
+
 ## 安全
 
 权限分为 **Ask**、**Approve for Me** 和 **Full Access**，通过 `Shift+Tab` 切换。请审阅工具调用，并选择满足任务需要的最低权限。加载第三方扩展或报告漏洞前，请阅读 [SECURITY.md](SECURITY.md)。
+
+主 CI 负责 Build、Check 和 Test，定时 `npm audit` 负责生产依赖公告检查，两者互不代表。可在本地复现生产依赖审计：
+
+```bash
+pnpm audit --prod --audit-level moderate
+```
+
+审计失败通常需要兼容的依赖与锁文件升级，不应通过关闭审计或跳过检查掩盖。
 
 ## 卸载
 
@@ -226,6 +270,9 @@ pnpm run check
 - [定制指南](docs/customization.md)：默认值、参数校验、包边界和扩展流程
 - [定制包约定](packages/custom/README.md)：公开入口与合并约束
 - [上游同步指南](docs/upstream-sync.md)：私有开发与上游合并流程
+- [自适应上下文管理](docs/context-management.md)：压缩比例、单模型覆盖与响应空间保护
+- [性能验证指南](docs/performance.md)：可复现的启动、缓存与配置测量
+- [故障排查](docs/troubleshooting.md)：安装、命令、CI、审计和平台限制
 - [开发指南](docs/development.md) · [测试指南](docs/testing.md)
 - [贡献指南](contribute.md) · [安全政策](SECURITY.md)
 - [问题反馈](https://github.com/soulwo/Step-Code-custom/issues)

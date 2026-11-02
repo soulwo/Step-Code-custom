@@ -7,6 +7,9 @@ Use this index for current product and maintenance documentation. Historical res
 - [Project overview and installation](../README.md) — features, source installation, sign-in, examples, shortcuts, and verification.
 - [中文项目说明](../README.zh-CN.md) — 项目特性、安装、使用示例与定制入口。
 - [Step configuration files](step-configuration.md) — global and project TOML settings, credentials, permissions, environment variables, and runtime behavior.
+- [Adaptive context management](context-management.md) — compaction ratios, per-model overrides, and response headroom.
+- [Performance verification](performance.md) — reproducible startup, cache, and configuration measurements.
+- [Troubleshooting](troubleshooting.md) — installation, commands, CI, audits, and platform limitations.
 - [Command permissions](command-permissions.md) — command matching and approval behavior.
 
 ## Customize and maintain

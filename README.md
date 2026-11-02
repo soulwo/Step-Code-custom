@@ -11,10 +11,13 @@
   <img src="https://img.shields.io/badge/pnpm-9.15.9-f69220?logo=pnpm&logoColor=white" alt="pnpm 9.15.9">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT license"></a>
   <a href="https://github.com/stepfun-ai/Step-Code"><img src="https://img.shields.io/badge/upstream-Step--Code-6e56cf" alt="Based on Step-Code"></a>
+  <a href="https://github.com/soulwo/Step-Code-custom/actions/workflows/ci.yml"><img src="https://github.com/soulwo/Step-Code-custom/actions/workflows/ci.yml/badge.svg?branch=main" alt="Main CI"></a>
+  <a href="https://github.com/soulwo/Step-Code-custom/actions/workflows/npm-audit.yml"><img src="https://github.com/soulwo/Step-Code-custom/actions/workflows/npm-audit.yml/badge.svg?branch=main" alt="Production dependency audit"></a>
 </p>
 
 <p align="center">
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a><br>
+  <a href="#what-is-different-from-upstream">Upstream comparison</a> ·
   <a href="#terminal-at-a-glance">Terminal</a> ·
   <a href="#why-step-code-custom">Features</a> ·
   <a href="#architecture">Architecture</a> ·
@@ -28,6 +31,21 @@
 Step Code Custom is an independently maintained, private, customized downstream build based on [stepfun-ai/Step-Code](https://github.com/stepfun-ai/Step-Code). It preserves the upstream terminal coding-agent workflow while adding isolated local customization, reliability fixes, and performance improvements. It reads and modifies code, runs commands and tests, resumes sessions, and supports interactive or headless workflows. The original `step` command and existing configuration formats are preserved so current workflows continue to work.
 
 This repository is owned and maintained at [soulwo/Step-Code-custom](https://github.com/soulwo/Step-Code-custom). It is not the upstream project's release page, and it does not publish official upstream installers.
+
+## What is different from upstream
+
+The repository continues to merge upstream improvements and maintains the following custom behavior on top of them. "Upstream baseline" identifies the integration point rather than scoring every feature in every upstream release.
+
+| Area | Upstream baseline | Custom enhancement |
+| --- | --- | --- |
+| Custom code | Runtime modules | Reusable policy is isolated in `packages/custom` and connected through small adapters |
+| State writes | Atomic replacement | Existing file permissions are preserved, including correct behavior under Linux umask |
+| File and session I/O | Upstream scheduling | `find_stat` defaults to 32 concurrent reads and project session scans to 8 |
+| Streaming JSON parsing | Upstream parsing policy | Intermediate blocks wait at least 24ms and 128 new characters by default; final blocks are always parsed completely |
+| Model catalog | Upstream refresh policy | Fresh cache is used for 5 minutes by default and refreshed in the background |
+| CLI builds | Application entrypoint | Both `apps/cli` and the standalone `packages/coding-agent` bundle are retained |
+
+All defaults can be changed in a JSON file selected through `STEPCODE_CUSTOM_CONFIG`. See the [customization guide](docs/customization.md) for fields, validation, and recovery behavior.
 
 ## Terminal at a glance
 
@@ -96,6 +114,8 @@ Inside the TUI, `/login` opens the sign-in flow; from a shell, run `step login`.
 `/status` shows session and model status. Use `step login status` or `step login status --json` to check the credential. Stored credentials live in `~/.stepcode/auth.json`; `/logout` clears the Step credential. After sign-in, `/model` lists models discovered from the active endpoint. A fresh model catalog is loaded from cache at startup and refreshed in the background.
 
 ## Getting started
+
+In these examples, `step` means an installed CLI available on `PATH`. When running from this source checkout, keep using `pnpm step` from the repository root instead. Running `step` does not automatically select the current source tree.
 
 Change into a project directory:
 
@@ -179,6 +199,20 @@ For a local JSON configuration, set `STEPCODE_CUSTOM_CONFIG` to the file path be
 
 Set `streamingParseIntervalMs` to `0` for eager intermediate parsing, or `modelCatalogTtlMs` to `0` to force a startup catalog refresh.
 
+### Adaptive context configuration
+
+Set a global compaction ratio in `~/.stepcode/config.toml`, with optional overrides keyed by `provider/model-id`:
+
+```toml
+[compaction]
+triggerRatio = 0.85
+
+[compaction.modelTriggerRatios]
+"provider/model-id" = 0.80
+```
+
+Ratios range from `0.50` through `0.95`, with a default of `0.90`. The v2 policy also preserves response room on smaller context windows. See [Adaptive context management](docs/context-management.md) for absolute token limits, defaults, and legacy behavior.
+
 ## Migrate from other agents
 
 - **MCP configuration** — supported Claude Code and Codex MCP configuration can be imported on first launch without modifying the source files or inlining secrets.
@@ -212,9 +246,19 @@ pnpm run check
 
 The full test script isolates user credentials and temporary resources. Some platform-specific suites may require Bash, Git, or symlink permission on Windows; report environment limitations separately from code failures.
 
+See the [performance verification guide](docs/performance.md) for reproducible startup, cache, and configuration measurements. Do not claim a specific speedup without comparable measurements.
+
 ## Security
 
 Permission tiers are **Ask**, **Approve for Me**, and **Full Access**, cycled with `Shift+Tab`. Review tool calls and use the least permissive mode suitable for the task. Read [SECURITY.md](SECURITY.md) before reporting a vulnerability or loading third-party extensions.
+
+The main CI runs Build, Check, and Test, while the scheduled `npm audit` checks current production-dependency advisories. Neither substitutes for the other. Reproduce the production audit locally with:
+
+```bash
+pnpm audit --prod --audit-level moderate
+```
+
+Audit failures generally require compatible dependency and lockfile updates; they should not be hidden by disabling the audit or skipping checks.
 
 ## Uninstall
 
@@ -226,6 +270,9 @@ For a source installation, close running sessions and remove the cloned reposito
 - [Customization guide](docs/customization.md) — defaults, validation, package boundaries, and extension workflow
 - [Customization package contract](packages/custom/README.md) — public entry points and merge constraints
 - [Upstream synchronization](docs/upstream-sync.md) — private development and upstream merge procedure
+- [Adaptive context management](docs/context-management.md) — ratios, per-model overrides, and response headroom
+- [Performance verification](docs/performance.md) — reproducible startup, cache, and configuration measurements
+- [Troubleshooting](docs/troubleshooting.md) — installation, commands, CI, audits, and platform limitations
 - [Development guide](docs/development.md) · [Testing guide](docs/testing.md)
 - [Contribution guide](contribute.md) · [Security policy](SECURITY.md)
 - [Issues](https://github.com/soulwo/Step-Code-custom/issues)

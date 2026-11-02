@@ -19,6 +19,10 @@ and `auth.json` keep their own formats — they hold model definitions and
 credentials, not settings — and a stale Step endpoint recorded in `models.json`
 by an older release is still repaired in place at startup.
 
+## Automatic compaction
+
+The `compaction` table controls ratio-based automatic compaction, including global and per-model trigger ratios, response headroom, and optional absolute token limits. See [Adaptive context management](context-management.md) for examples and defaults.
+
 ## Step Plan login and API-key fallback
 
 Browser sign-in checks the selected region's `/step_plan/v1/usage` endpoint
