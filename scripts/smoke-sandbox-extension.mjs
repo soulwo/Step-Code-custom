@@ -33,9 +33,9 @@ try {
 		throw new Error("Sandbox initialization did not enable sandboxing");
 	}
 	const probe = `
-const fs = require("node:fs");
-const path = require("node:path");
-const net = require("node:net");
+import fs from "node:fs";
+import path from "node:path";
+import net from "node:net";
 let allowedWrite = false;
 let deniedWrite = false;
 try {
