@@ -492,6 +492,41 @@ describe("Step dynamic model discovery", () => {
 		expect((await modelsStore.read(STEP_PROVIDER_ID))?.models.map((model) => model.id)).toEqual(["step-cache-live"]);
 	});
 
+	it("keeps the configured baseline for an empty offline cache without persisting it", async () => {
+		const modelsStore = new InMemoryCodingAgentModelsStore();
+		const fetchMock = vi.fn();
+		const runtime = await ModelRuntime.create({
+			credentials: AuthStorage.inMemory({ [STEP_PROVIDER_ID]: { type: "api_key", key: "offline-test" } }),
+			modelsPath: null,
+			modelsStore,
+			refreshOnCreate: false,
+		});
+		runtime.registerProvider(
+			STEP_PROVIDER_ID,
+			createStepProviderConfig({
+				env: {},
+				fetch: fetchMock,
+				models: [
+					{
+						id: "step-offline-baseline",
+						name: "Step Offline Baseline",
+						reasoning: false,
+						input: ["text"],
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+						contextWindow: 128_000,
+						maxTokens: 8192,
+					},
+				],
+			}),
+		);
+
+		await runtime.refresh({ allowNetwork: false });
+
+		expect(runtime.getModel(STEP_PROVIDER_ID, "step-offline-baseline")).toBeDefined();
+		expect(fetchMock).not.toHaveBeenCalled();
+		expect(await modelsStore.read(STEP_PROVIDER_ID)).toBeUndefined();
+	});
+
 	it("keeps chat-capable models (LLM and router) when the endpoint tags model_type", async () => {
 		const resolved = resolveStepProviderOptions({ env: {} });
 		const fetchMock = vi.fn(

@@ -49,7 +49,17 @@ function createStepProviderConfigFromResolved(resolved: ResolvedStepProviderOpti
 		// last successful catalog instead of erasing it.
 		refreshModels: async (context) => {
 			const models = await fetchStepModels(context, { ...resolved, models: [] });
-			if (models.length === 0) return context.stored ? [...context.stored.models] : [];
+			if (models.length === 0) {
+				if (context.stored) return [...context.stored.models];
+				// Keep the built-in/pre-login catalog available in memory without
+				// marking it as a successful network refresh.
+				return resolved.models.map((model) => ({
+					...normalizeStepModelConfig(model),
+					api: "openai-completions" as const,
+					baseUrl: model.baseUrl ?? openaiBaseUrl,
+					provider: resolved.providerId,
+				}));
+			}
 			const runtimeModels = models.map((model) => ({
 				...normalizeStepModelConfig(model),
 				api: "openai-completions" as const,
