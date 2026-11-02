@@ -44,7 +44,10 @@ jobs:
           node scripts/profile-coding-agent-node.mjs --mode rpc --bundle --runs 1 --isolated-agent-dir --skip-build
 
       - name: Smoke sandbox extension
-        run: node scripts/smoke-sandbox-extension.mjs
+        # Hosted runners do not grant the runner user CAP_NET_ADMIN, which
+        # bwrap needs to configure loopback in its isolated network namespace.
+        # Run only this probe as root on the disposable CI VM.
+        run: sudo --preserve-env=PATH node scripts/smoke-sandbox-extension.mjs
 
       - name: Check
         run: pnpm run check
