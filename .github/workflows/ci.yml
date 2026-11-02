@@ -28,7 +28,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep bubblewrap socat
           sudo ln -s $(which fdfind) /usr/local/bin/fd
 
       - name: Install dependencies
@@ -36,6 +36,15 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: Smoke standalone bundle
+        run: |
+          node packages/coding-agent/dist/bundle/step.js --version
+          node packages/coding-agent/dist/bundle/step.js --help > /dev/null
+          node scripts/profile-coding-agent-node.mjs --mode rpc --bundle --runs 1 --isolated-agent-dir --skip-build
+
+      - name: Smoke sandbox extension
+        run: node scripts/smoke-sandbox-extension.mjs
 
       - name: Check
         run: pnpm run check

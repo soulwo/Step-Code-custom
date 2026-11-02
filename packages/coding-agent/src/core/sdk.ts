@@ -210,7 +210,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	const settingsManager =
 		options.settingsManager ?? SettingsManager.create(cwd, agentDir, { configDirName: options.configDirName });
-	const sessionManager = options.sessionManager ?? SessionManager.create(cwd, getDefaultSessionDir(cwd, agentDir));
+	const defaultSessionDir = options.sessionManager ? undefined : getDefaultSessionDir(cwd, agentDir);
+	const sessionManager =
+		options.sessionManager ?? SessionManager.create(cwd, defaultSessionDir, undefined, defaultSessionDir);
 
 	if (!resourceLoader) {
 		resourceLoader = new DefaultResourceLoader({

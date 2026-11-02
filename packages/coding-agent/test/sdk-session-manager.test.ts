@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAgentSession } from "../src/core/sdk.ts";
 import { getDefaultSessionDir, SessionManager } from "../src/core/session-manager.ts";
@@ -42,14 +42,23 @@ describe("createAgentSession session manager defaults", () => {
 		const sessionFile = session.sessionManager.getSessionFile();
 
 		expect(sessionDir).toBe(expectedSessionDir);
+		expect(session.sessionManager.usesDefaultSessionDir()).toBe(true);
 		expect(sessionFile === undefined ? undefined : dirname(sessionFile)).toBe(expectedSessionDir);
 
 		session.dispose();
 	});
 
 	it("recognizes the default session layout below a direct custom agentDir", () => {
-		const manager = SessionManager.create(cwd, getDefaultSessionDir(cwd, agentDir));
+		const defaultDir = getDefaultSessionDir(cwd, agentDir);
+		const manager = SessionManager.create(cwd, defaultDir, undefined, defaultDir);
 		expect(manager.usesDefaultSessionDir()).toBe(true);
+	});
+
+	it("does not confuse another root with the default session directory", () => {
+		const defaultDir = getDefaultSessionDir(cwd, agentDir);
+		const otherRootDir = join(tempDir, "other-root", "sessions", basename(defaultDir));
+		const manager = SessionManager.create(cwd, otherRootDir);
+		expect(manager.usesDefaultSessionDir()).toBe(false);
 	});
 
 	it("keeps an explicit sessionManager override", async () => {

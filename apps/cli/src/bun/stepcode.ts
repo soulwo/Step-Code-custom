@@ -9,11 +9,7 @@
 // through #main) so config.ts resolves the Step storage namespace even when the
 // launcher filename is not detected by isStepEntrypoint().
 import "#bootstrap/environment";
-import { installSelectiveWarningFilter, loadCustomConfig } from "@step-harness/custom/node";
 import { restoreSandboxEnv } from "#bun/restore-sandbox-env";
-
-loadCustomConfig();
-installSelectiveWarningFilter();
 
 restoreSandboxEnv();
 

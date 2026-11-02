@@ -8,18 +8,18 @@ Build first, then run repeated RPC startup measurements with an isolated agent d
 
 ```bash
 pnpm run build:offline
-pnpm run profile:rpc -- --runs 5 --warmup 2 --isolated-agent-dir
+pnpm run profile:rpc --runs 5 --warmup 2 --isolated-agent-dir
 ```
 
 Profile the standalone coding-agent bundle separately:
 
 ```bash
-pnpm run profile:rpc -- --bundle --runs 5 --warmup 2 --isolated-agent-dir
+pnpm run profile:rpc --bundle --runs 5 --warmup 2 --isolated-agent-dir
 ```
 
 The profiler measures startup through a real RPC `get_state` response. Warmup runs reduce first-load distortion, and the isolated agent directory avoids reading your normal credentials, sessions, and machine-specific configuration. Add `--cpu-profile` when CPU profiles are needed for deeper analysis; they are written under `profiles-node` by default.
 
-Use `pnpm run profile:rpc -- --help` for all supported options. The current profiler supports RPC mode.
+Use `pnpm run profile:rpc --help` for all supported options. The current profiler supports RPC mode.
 
 ## Compare changes consistently
 

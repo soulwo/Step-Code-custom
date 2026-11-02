@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { chmodSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { isBuiltin } from "node:module";
+import { createRequire, isBuiltin } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -56,6 +56,42 @@ export function createJiti(...args) {
 	},
 };
 
+// Lodash's optional freeModule.require("util") probe is enough to trigger
+// Node's require/top-level-await ambiguity check even when that branch is not
+// executed. Use Node's built-in accessor without changing the Lodash logic.
+const nodeBuiltinRequirePlugin = {
+	name: "node-builtin-require",
+	setup(build) {
+		build.onLoad({ filter: /node_modules[\\/](?:lodash-es|lodash\.merge)[\\/]/ }, (args) => ({
+			contents: readFileSync(args.path, "utf8").replaceAll(
+				"freeModule.require('util')",
+				'process.getBuiltinModule("util")',
+			),
+			loader: "js",
+		}));
+	},
+};
+
+// Lark publishes both CJS (lib) and ESM (es). Node 22 rejects a bundle that
+// mixes the CJS entry's require() calls with the application's top-level await.
+const larkEsmEntry = createRequire(join(repoRoot, "packages", "lark-adapter", "package.json")).resolve(
+	"@larksuiteoapi/node-sdk/es/index.js",
+);
+const larkEsmEntryPlugin = {
+	name: "lark-esm-entry",
+	setup(build) {
+		build.onResolve({ filter: /^@larksuiteoapi\/node-sdk$/ }, () => ({ path: larkEsmEntry, namespace: "lark-esm" }));
+		build.onLoad({ filter: /.*/, namespace: "lark-esm" }, (args) => ({
+			contents: `import { dirname as __larkDirname } from "node:path";
+import { fileURLToPath as __larkFileURLToPath } from "node:url";
+const __dirname = __larkDirname(__larkFileURLToPath(import.meta.url));
+${readFileSync(args.path, "utf8")}`,
+			loader: "js",
+			resolveDir: dirname(args.path),
+		}));
+	},
+};
+
 const httpsProxyAgentNamedExportPlugin = {
 	name: "https-proxy-agent-named-export",
 	setup(build) {
@@ -98,7 +134,7 @@ function commonBuildOptions() {
 		// package replaces it with a synchronous lazy require so jiti loads only
 		// when importing an extension; Babel remains deferred until a cache miss
 		// needs transformation.
-		plugins: [lazyJitiPlugin, httpsProxyAgentNamedExportPlugin],
+		plugins: [nodeBuiltinRequirePlugin, larkEsmEntryPlugin, lazyJitiPlugin, httpsProxyAgentNamedExportPlugin],
 		sourcemap: false,
 		target: "node22.19",
 		// Do not apply the monorepo's source-oriented path aliases while bundling
@@ -199,6 +235,9 @@ for (const entry of [
 
 rmSync(bundleDir, { force: true, recursive: true });
 mkdirSync(bundleDir, { recursive: true });
+// Mark the output explicitly as ESM so Node's ambiguous-syntax detection does
+// not reject the intentional CJS-to-ESM compatibility wrappers.
+writeFileSync(join(bundleDir, "package.json"), '{"type":"module"}\n');
 
 const mainResult = await build({
 	...commonBuildOptions(),
@@ -243,6 +282,33 @@ const sessionIndexResult = await build({
 	splitting: false,
 });
 validateExternalImports([sessionIndexResult.metafile]);
+
+// The bundle has its own ESM package.json, making it the package root at
+// runtime. Ship the assets and metadata that this root is expected to contain.
+function copyTree(source, destination) {
+	if (!statSync(source).isDirectory()) {
+		mkdirSync(dirname(destination), { recursive: true });
+		copyFileSync(source, destination);
+		return;
+	}
+	mkdirSync(destination, { recursive: true });
+	for (const entry of readdirSync(source)) copyTree(join(source, entry), join(destination, entry));
+}
+for (const asset of [
+	["theme", ["dist", "theme"]],
+	["core/export-html", ["dist", "core", "export-html"]],
+	["modes/interactive/assets", ["dist", "modes", "interactive", "assets"]],
+]) {
+	const [source, target] = asset;
+	const sourcePath = join(codingAgentDistDir, source);
+	if (existsSync(sourcePath)) copyTree(sourcePath, join(bundleDir, ...target));
+}
+for (const asset of ["README.md", "docs", "examples", "CHANGELOG.md"]) {
+	copyTree(join(codingAgentDir, asset), join(bundleDir, asset));
+}
+const bundlePackage = JSON.parse(readFileSync(join(codingAgentDir, "package.json"), "utf8"));
+bundlePackage.type = "module";
+writeFileSync(join(bundleDir, "package.json"), `${JSON.stringify(bundlePackage, null, 2)}\n`);
 chmodSync(join(bundleDir, "step.js"), 0o755);
 
 const files = new Set([...Object.keys(mainResult.metafile.outputs), ...Object.keys(lazyResult.metafile.outputs), ...Object.keys(activityResult.metafile.outputs), ...Object.keys(sessionIndexResult.metafile.outputs)]).size;

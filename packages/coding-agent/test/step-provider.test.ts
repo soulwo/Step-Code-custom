@@ -443,6 +443,55 @@ describe("Step dynamic model discovery", () => {
 		});
 	});
 
+	it("persists successful catalogs and restores them offline without accepting failed refreshes", async () => {
+		const modelsStore = new InMemoryCodingAgentModelsStore();
+		const fetchMock = vi.fn(
+			async () =>
+				new Response(JSON.stringify({ data: [{ id: "step-cache-live" }] }), {
+					status: 200,
+					headers: { "content-type": "application/json" },
+				}),
+		);
+		const credentials = () =>
+			AuthStorage.inMemory({
+				[STEP_PROVIDER_ID]: {
+					type: "oauth",
+					access: "step-key",
+					refresh: STEP_STATIC_REFRESH_TOKEN,
+					expires: Number.MAX_SAFE_INTEGER,
+				},
+			});
+		const createRuntime = () =>
+			ModelRuntime.create({
+				credentials: credentials(),
+				modelsPath: null,
+				modelsStore,
+				refreshOnCreate: false,
+			});
+
+		const online = await createRuntime();
+		online.registerProvider(STEP_PROVIDER_ID, createStepProviderConfig({ env: {}, fetch: fetchMock }));
+		await online.refresh({ allowNetwork: true, force: true });
+		const stored = await modelsStore.read(STEP_PROVIDER_ID);
+		expect(stored?.models.map((model) => model.id)).toEqual(["step-cache-live"]);
+		expect(typeof stored?.checkedAt).toBe("number");
+		const checkedAt = stored?.checkedAt;
+
+		const offline = await createRuntime();
+		offline.registerProvider(STEP_PROVIDER_ID, createStepProviderConfig({ env: {}, fetch: fetchMock }));
+		await offline.refresh({ allowNetwork: false });
+		expect(offline.getModel(STEP_PROVIDER_ID, "step-cache-live")).toBeDefined();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+
+		const failedFetch = vi.fn(async () => new Response("unavailable", { status: 500 }));
+		const failed = await createRuntime();
+		failed.registerProvider(STEP_PROVIDER_ID, createStepProviderConfig({ env: {}, fetch: failedFetch }));
+		await failed.refresh({ allowNetwork: true, force: true });
+		expect(failed.getModel(STEP_PROVIDER_ID, "step-cache-live")).toBeDefined();
+		expect((await modelsStore.read(STEP_PROVIDER_ID))?.checkedAt).toBe(checkedAt);
+		expect((await modelsStore.read(STEP_PROVIDER_ID))?.models.map((model) => model.id)).toEqual(["step-cache-live"]);
+	});
+
 	it("keeps chat-capable models (LLM and router) when the endpoint tags model_type", async () => {
 		const resolved = resolveStepProviderOptions({ env: {} });
 		const fetchMock = vi.fn(

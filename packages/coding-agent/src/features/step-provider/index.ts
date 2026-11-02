@@ -43,8 +43,22 @@ function createStepProviderConfigFromResolved(resolved: ResolvedStepProviderOpti
 		normalizeModels: (models) => models.map((model) => normalizeStepModel(model, openaiBaseUrl)),
 		models: resolved.models.map((model) => normalizeStepModelConfig(model)),
 		// After login, replace the baseline with the account's real usable models
-		// discovered from `{base}/v1/models`.
-		refreshModels: (context) => fetchStepModels(context, resolved),
+		// discovered from `{base}/v1/models`. fetchStepModels intentionally returns
+		// an empty baseline on transport/auth failure, so only a non-empty live
+		// result earns a new checkedAt timestamp. Offline/failed refreshes reuse the
+		// last successful catalog instead of erasing it.
+		refreshModels: async (context) => {
+			const models = await fetchStepModels(context, { ...resolved, models: [] });
+			if (models.length === 0) return context.stored ? [...context.stored.models] : [];
+			const runtimeModels = models.map((model) => ({
+				...normalizeStepModelConfig(model),
+				api: "openai-completions" as const,
+				baseUrl: model.baseUrl ?? openaiBaseUrl,
+				provider: resolved.providerId,
+			}));
+			await context.publish({ persist: { models: runtimeModels, checkedAt: Date.now() } });
+			return models;
+		},
 		oauth: {
 			name: "Step Plan",
 			isSubscription: true,

@@ -15,7 +15,7 @@ import {
 	writeFileSync,
 } from "fs";
 import { readdir, stat } from "fs/promises";
-import { basename, dirname, join, resolve } from "path";
+import { join, resolve } from "path";
 import { createInterface } from "readline";
 import { StringDecoder } from "string_decoder";
 import { APP_NAME, getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
@@ -829,6 +829,7 @@ export class SessionManager {
 	private labelTimestampsById: Map<string, string> = new Map();
 	private leafId: string | null = null;
 	private filePersistedListener: SessionFilePersistedListener | undefined;
+	private readonly defaultSessionDir: string | undefined;
 
 	private constructor(
 		cwd: string,
@@ -837,9 +838,11 @@ export class SessionManager {
 		persist: boolean,
 		newSessionOptions?: NewSessionOptions,
 		preloadedFileEntries?: FileEntry[],
+		defaultSessionDir?: string,
 	) {
 		this.cwd = resolvePath(cwd);
 		this.sessionDir = normalizePath(sessionDir);
+		this.defaultSessionDir = defaultSessionDir ? normalizePath(defaultSessionDir) : undefined;
 		this.persist = persist;
 		if (persist && this.sessionDir && !existsSync(this.sessionDir)) {
 			mkdirSync(this.sessionDir, { recursive: true });
@@ -987,12 +990,11 @@ export class SessionManager {
 	}
 
 	usesDefaultSessionDir(): boolean {
-		// Compare the layout rather than the process-global root: SDK callers may
-		// deliberately place the same per-cwd layout below a custom agentDir.
-		return (
-			basename(this.sessionDir) === basename(getDefaultSessionDirPath(this.cwd)) &&
-			basename(dirname(this.sessionDir)) === "sessions"
-		);
+		// SDK hosts can supply a custom agentDir at creation. All other callers use
+		// the process default root; matching only the final path components would
+		// misclassify an unrelated root with the same sessions/<cwd> layout.
+		const defaultDir = this.defaultSessionDir ?? getDefaultSessionDirPath(this.cwd);
+		return this.sessionDir === normalizePath(defaultDir);
 	}
 
 	getSessionId(): string {
@@ -1532,9 +1534,14 @@ export class SessionManager {
 	 * @param cwd Working directory (stored in session header)
 	 * @param sessionDir Optional session directory. If omitted, uses default (~/.pi/agent/sessions/<encoded-cwd>/).
 	 */
-	static create(cwd: string, sessionDir?: string, options?: NewSessionOptions): SessionManager {
+	static create(
+		cwd: string,
+		sessionDir?: string,
+		options?: NewSessionOptions,
+		defaultSessionDir?: string,
+	): SessionManager {
 		const dir = sessionDir ? normalizePath(sessionDir) : getDefaultSessionDir(cwd);
-		return new SessionManager(cwd, dir, undefined, true, options);
+		return new SessionManager(cwd, dir, undefined, true, options, undefined, defaultSessionDir);
 	}
 
 	/**
