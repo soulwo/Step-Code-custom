@@ -152,6 +152,132 @@ describe("StepStdioHost", () => {
 		expect(runtime.dispose).toHaveBeenCalledTimes(1);
 	});
 
+	test("a plan handoff reaches the SDK result even without assistant text", async () => {
+		const input = new PassThrough();
+		const output = new PassThrough();
+		const decoder = new StepStdioFrameDecoder();
+		const frames: ReturnType<StepStdioFrameDecoder["push"]> = [];
+		output.on("data", (chunk: Buffer) => frames.push(...decoder.push(chunk)));
+		const waitFor = async (predicate: () => boolean): Promise<void> => {
+			const deadline = Date.now() + 1_000;
+			while (!predicate() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 5));
+			expect(predicate()).toBe(true);
+		};
+		const { runtime, session } = createFakeRuntime();
+		// The handoff ends the turn on its tool result, so the query settles with no
+		// assistant text at all: an empty success result would hide the proposal.
+		(session as unknown as { getLastAssistantText: () => string | undefined }).getLastAssistantText = () => undefined;
+		session.messages.push({
+			role: "toolResult",
+			toolCallId: "plan-1",
+			toolName: "exit_plan_mode",
+			content: [{ type: "text", text: "Caller must approve.\n\nPlan contents:\n# Proposal\nDo it." }],
+			details: { outcome: "external_approval_required" },
+			isError: false,
+			timestamp: Date.now(),
+		});
+		const host = new StepStdioHost({ runtimeHost: runtime, input, output, onExitRequested: vi.fn() });
+		const running = host.run();
+
+		input.write(
+			encodeStepStdioFrame({
+				protocol: "step-agent-sdk",
+				version: 1,
+				kind: "request",
+				id: "init",
+				method: "initialize",
+				payload: { protocolRange: { min: 1, max: 1 } },
+			}),
+		);
+		input.write(
+			encodeStepStdioFrame({
+				protocol: "step-agent-sdk",
+				version: 1,
+				kind: "request",
+				id: "query",
+				method: "query.start",
+				payload: { streamingInput: false },
+			}),
+		);
+		await waitFor(() =>
+			frames.some(
+				(frame) =>
+					frame.kind === "event" && (frame.payload as { message?: { type?: string } }).message?.type === "result",
+			),
+		);
+		const result = frames.find(
+			(frame) =>
+				frame.kind === "event" && (frame.payload as { message?: { type?: string } }).message?.type === "result",
+		)!.payload as { message: { subtype: string; result: string } };
+		expect(result.message).toMatchObject({ subtype: "success" });
+		expect(result.message.result).toContain("# Proposal");
+		await host.close();
+		await running;
+	});
+
+	test("a plan handoff wins over the assistant line that introduces it", async () => {
+		const input = new PassThrough();
+		const output = new PassThrough();
+		const decoder = new StepStdioFrameDecoder();
+		const frames: ReturnType<StepStdioFrameDecoder["push"]> = [];
+		output.on("data", (chunk: Buffer) => frames.push(...decoder.push(chunk)));
+		const waitFor = async (predicate: () => boolean): Promise<void> => {
+			const deadline = Date.now() + 1_000;
+			while (!predicate() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 5));
+			expect(predicate()).toBe(true);
+		};
+		const { runtime, session } = createFakeRuntime();
+		// The model often writes one line before calling the tool. That line is not
+		// the proposal, so the pending handoff has to win over it.
+		(session as unknown as { getLastAssistantText: () => string | undefined }).getLastAssistantText = () =>
+			"Plan is ready, submitting for review.";
+		session.messages.push({
+			role: "toolResult",
+			toolCallId: "plan-1",
+			toolName: "exit_plan_mode",
+			content: [{ type: "text", text: "Caller must approve.\n\nPlan contents:\n# Proposal\nDo it." }],
+			details: { outcome: "external_approval_required" },
+			isError: false,
+			timestamp: Date.now(),
+		});
+		const host = new StepStdioHost({ runtimeHost: runtime, input, output, onExitRequested: vi.fn() });
+		const running = host.run();
+		input.write(
+			encodeStepStdioFrame({
+				protocol: "step-agent-sdk",
+				version: 1,
+				kind: "request",
+				id: "init",
+				method: "initialize",
+				payload: { protocolRange: { min: 1, max: 1 } },
+			}),
+		);
+		input.write(
+			encodeStepStdioFrame({
+				protocol: "step-agent-sdk",
+				version: 1,
+				kind: "request",
+				id: "query",
+				method: "query.start",
+				payload: { streamingInput: false },
+			}),
+		);
+		await waitFor(() =>
+			frames.some(
+				(frame) =>
+					frame.kind === "event" && (frame.payload as { message?: { type?: string } }).message?.type === "result",
+			),
+		);
+		const result = frames.find(
+			(frame) =>
+				frame.kind === "event" && (frame.payload as { message?: { type?: string } }).message?.type === "result",
+		)!.payload as { message: { result: string } };
+		expect(result.message.result).toContain("# Proposal");
+		expect(result.message.result).not.toBe("Plan is ready, submitting for review.");
+		await host.close();
+		await running;
+	});
+
 	test("accepts the SDK's nested user message shape", async () => {
 		const input = new PassThrough();
 		const output = new PassThrough();
@@ -322,6 +448,69 @@ describe("StepStdioHost", () => {
 			}),
 		);
 		await expect(resultPromise).resolves.toMatchObject({ content: [{ type: "text", text: "42" }] });
+		await host.close();
+		await running;
+	});
+
+	test("reports a failed command as is_error on both the live and recorded paths", async () => {
+		const input = new PassThrough();
+		const output = new PassThrough();
+		const decoder = new StepStdioFrameDecoder();
+		const frames: ReturnType<StepStdioFrameDecoder["push"]> = [];
+		output.on("data", (chunk: Buffer) => frames.push(...decoder.push(chunk)));
+		const waitFor = async (predicate: () => boolean): Promise<void> => {
+			const deadline = Date.now() + 1_000;
+			while (!predicate() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 5));
+			expect(predicate()).toBe(true);
+		};
+		const { runtime, session, emit } = createFakeRuntime(true);
+		const execution = {
+			status: "exited",
+			exitCode: 3,
+			signal: null,
+			timedOut: false,
+			aborted: false,
+		};
+		const toolResult = {
+			role: "toolResult",
+			toolCallId: "call-1",
+			toolName: "run_command",
+			content: [{ type: "text", text: "Command exited with code 3" }],
+			details: { execution },
+			isError: false,
+			timestamp: 1,
+		};
+		(session as unknown as { messages: unknown[] }).messages = [toolResult];
+
+		const host = new StepStdioHost({ runtimeHost: runtime, input, output });
+		const running = host.run();
+		const envelope = (id: string, method: string, payload: unknown): Buffer =>
+			encodeStepStdioFrame({ protocol: "step-agent-sdk", version: 1, kind: "request", id, method, payload });
+
+		input.write(envelope("init", "initialize", { protocolRange: { min: 1, max: 1 } }));
+		await waitFor(() => frames.some((frame) => frame.kind === "response" && frame.replyTo === "init"));
+		input.write(envelope("query", "query.start", { streamingInput: true }));
+		await waitFor(() => frames.some((frame) => frame.kind === "response" && frame.replyTo === "query"));
+
+		// Live path: the same facts arrive as a tool-execution event.
+		emit({
+			type: "tool_execution_end",
+			toolCallId: "call-1",
+			toolName: "run_command",
+			result: { content: toolResult.content, details: toolResult.details, isError: false },
+			isError: false,
+		} as AgentSessionEvent);
+		await waitFor(() =>
+			frames.some((frame) => frame.kind === "event" && JSON.stringify(frame.payload).includes('"is_error":true')),
+		);
+
+		// Recorded path: the session projection must agree with the event.
+		input.write(envelope("messages", "session.messages", { sessionId: session.sessionId }));
+		await waitFor(() => frames.some((frame) => frame.kind === "response" && frame.replyTo === "messages"));
+		const response = frames.find((frame) => frame.kind === "response" && frame.replyTo === "messages");
+		const projected = JSON.stringify(response?.payload);
+		expect(projected).toContain('"is_error":true');
+
 		await host.close();
 		await running;
 	});

@@ -23,6 +23,8 @@ import type {
 	ExtensionWidgetOptions,
 	WorkingIndicatorOptions,
 } from "../core/extensions/types.ts";
+import { isToolCommandFailure } from "../core/tools/command-outcome.ts";
+import { findPendingExternalPlanApproval } from "../features/plan-handoff.ts";
 import type { Theme } from "../theme/theme.ts";
 import { STEP_DEFAULT_PROVIDER } from "./defaults.ts";
 import { listStepSessions } from "./session.ts";
@@ -659,7 +661,12 @@ export class StepStdioHost {
 	#finishQuery(query: ActiveQuery, isError: boolean, cause?: unknown): void {
 		if (query.finished) return;
 		query.finished = true;
-		const text = this.#session.getLastAssistantText() ?? "";
+		// A plan handoff ends the turn on its tool result, so the query can settle
+		// with no assistant text at all, or with an assistant line that introduces
+		// the submission. Reporting either as the result would hide the proposal the
+		// caller has to approve, so an unanswered handoff wins.
+		const pendingHandoff = findPendingExternalPlanApproval(this.#session.messages);
+		const text = (pendingHandoff ? pendingHandoff.text : this.#session.getLastAssistantText()) ?? "";
 		this.#emitMessage(query, {
 			type: "result",
 			subtype: isError ? "error_during_execution" : "success",
@@ -1077,7 +1084,9 @@ export class StepStdioHost {
 							type: "tool_result",
 							tool_use_id: event.toolCallId,
 							content: toolResultText(event.result),
-							is_error: event.isError,
+							// Preserve the wire meaning: external callers use this flag to
+							// decide whether a result looked successful.
+							is_error: event.isError || isToolCommandFailure(event.result?.details),
 						},
 					],
 				},
@@ -1135,7 +1144,9 @@ export class StepStdioHost {
 							type: "tool_result",
 							tool_use_id: message.toolCallId,
 							content: toolResultText(message),
-							is_error: message.isError,
+							// Same derivation as the live event path; a recorded result
+							// must not report a different `is_error` than its event did.
+							is_error: message.isError || isToolCommandFailure(message.details),
 						},
 					],
 				},

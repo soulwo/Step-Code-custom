@@ -497,7 +497,14 @@ Response:
     "output": "total 48\ndrwxr-xr-x ...",
     "exitCode": 0,
     "cancelled": false,
-    "truncated": false
+    "truncated": false,
+    "execution": {
+      "status": "exited",
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "aborted": false
+    }
   }
 }
 ```
@@ -513,7 +520,14 @@ If output was truncated, includes `fullOutputPath`:
     "exitCode": 0,
     "cancelled": false,
     "truncated": true,
-    "fullOutputPath": "/tmp/step-bash-abc123.log"
+    "fullOutputPath": "/tmp/step-bash-abc123.log",
+    "execution": {
+      "status": "exited",
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "aborted": false
+    }
   }
 }
 ```
@@ -531,6 +545,9 @@ total 48
 drwxr-xr-x ...
 ```
 ````
+
+A status sentence follows the output only for a nonzero exit, a deadline, a
+signal, cancellation, or an unknown exit.
 
 This means:
 1. Bash output is included in the LLM context on the **next prompt**, not immediately
@@ -774,7 +791,10 @@ Response:
 
 #### get_last_assistant_text
 
-Get the text content of the last assistant message.
+Get the text content of the last assistant message. When the run handed a plan
+proposal to the caller and no user message has answered it yet, this returns the
+handoff text (the proposal) instead, because the assistant message only
+introduces the submission.
 
 ```json
 {"type": "get_last_assistant_text"}
@@ -1429,8 +1449,8 @@ Parse errors:
 
 Source files:
 - [`packages/providers/src/types.ts`](../../providers/src/types.ts) - `Model`, `UserMessage`, `AssistantMessage`, `ToolResultMessage`
-- [`packages/agent/src/types.ts`](../../agent/src/types.ts) - `AgentMessage`, `AgentEvent`
-- [`src/core/messages.ts`](../src/core/messages.ts) - `BashExecutionMessage`
+- [`packages/agent-core/src/types.ts`](../../agent-core/src/types.ts) - `AgentMessage`, `AgentEvent`
+- [`packages/agent-core/src/harness/messages.ts`](../../agent-core/src/harness/messages.ts) - Canonical `BashExecutionMessage`, including optional execution facts
 - [`src/modes/json-event.ts`](../src/modes/json-event.ts) - `JsonAgentSessionEvent`
 - [`src/modes/rpc/rpc-types.ts`](../src/modes/rpc/rpc-types.ts) - RPC command/response types, extension UI request/response types
 
@@ -1532,6 +1552,13 @@ Created by the `bash` RPC command (not by LLM tool calls):
   "cancelled": false,
   "truncated": false,
   "fullOutputPath": null,
+  "execution": {
+    "status": "exited",
+    "exitCode": 0,
+    "signal": null,
+    "timedOut": false,
+    "aborted": false
+  },
   "timestamp": 1733234567890
 }
 ```
