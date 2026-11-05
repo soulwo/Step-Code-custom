@@ -58,6 +58,8 @@ The terminal illustration uses selected output from the real `step --help` comma
 ## Why Step Code Custom
 
 - **Complete coding loop** — inspect a repository, edit files, execute tools, and verify changes in an interactive TUI or with `step -p` for automation.
+- **Clear execution outcomes** — distinguish command exit, timeout, signal, and output from tool-execution errors; show the applied diff when an edit fails after writing.
+- **Recoverable plans and turns** — persist Plan decisions as session facts and recover interrupted or incomplete assistant turns across supported runtimes.
 - **Step provider integration** — sign in with a Step Plan account or use a Step Platform API key, then select among the models returned by the active Step endpoint.
 - **Long-running work** — delegate objectives with `/goal`, schedule work with `/cron`, and opt into multi-agent workflows with `/ultracode` or `/ultraloop`.
 - **Adaptive context management** — compact automatically at configurable global or per-model context ratios, while preserving response room on smaller context windows.
@@ -248,6 +250,8 @@ The full test script isolates user credentials and temporary resources. Some pla
 
 See the [performance verification guide](docs/performance.md) for reproducible startup, cache, and configuration measurements. Do not claim a specific speedup without comparable measurements.
 
+The latest full review covered upstream `29eb460`, real CLI/bundle/RPC entrypoints, Linux sandbox effects, and production dependency auditing. Final cloud totals include 5274 coding-agent, 762 apps/cli, 560 agent-core, and 481 provider tests passing. See [verification evidence](docs/verification.md) for methods, the initial test-attempt fluctuation, and coverage boundaries.
+
 ## Security
 
 Permission tiers are **Ask**, **Approve for Me**, and **Full Access**, cycled with `Shift+Tab`. Review tool calls and use the least permissive mode suitable for the task. Read [SECURITY.md](SECURITY.md) before reporting a vulnerability or loading third-party extensions.
@@ -272,6 +276,7 @@ For a source installation, close running sessions and remove the cloned reposito
 - [Upstream synchronization](docs/upstream-sync.md) — private development and upstream merge procedure
 - [Adaptive context management](docs/context-management.md) — ratios, per-model overrides, and response headroom
 - [Performance verification](docs/performance.md) — reproducible startup, cache, and configuration measurements
+- [Verification evidence](docs/verification.md) — upstream baseline, real entrypoints, cloud tests, and coverage boundaries
 - [Troubleshooting](docs/troubleshooting.md) — installation, commands, CI, audits, and platform limitations
 - [Development guide](docs/development.md) · [Testing guide](docs/testing.md)
 - [Contribution guide](contribute.md) · [Security policy](SECURITY.md)

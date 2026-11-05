@@ -9,6 +9,7 @@ Use this index for current product and maintenance documentation. Historical res
 - [Step configuration files](step-configuration.md) — global and project TOML settings, credentials, permissions, environment variables, and runtime behavior.
 - [Adaptive context management](context-management.md) — compaction ratios, per-model overrides, and response headroom.
 - [Performance verification](performance.md) — reproducible startup, cache, and configuration measurements.
+- [Verification evidence](verification.md) — latest upstream baseline, real entrypoint/RPC results, cloud test totals, and coverage boundaries.
 - [Troubleshooting](troubleshooting.md) — installation, commands, CI, audits, and platform limitations.
 - [Command permissions](command-permissions.md) — command matching and approval behavior.
 

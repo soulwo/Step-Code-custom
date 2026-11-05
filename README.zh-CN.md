@@ -58,6 +58,8 @@ Step Code Custom 是基于上游 [stepfun-ai/Step-Code](https://github.com/stepf
 ## 项目特性
 
 - **完整编程闭环**：在交互式 TUI 中检查仓库、修改文件、执行工具并验证结果，也可通过 `step -p` 用于自动化任务。
+- **明确的执行结果**：区分命令退出、超时、信号与工具错误；编辑调用在写入后失败时仍展示实际变更。
+- **可恢复的计划与轮次**：将 Plan 决定保存为会话事实，并为中断或不完整的助手轮次提供恢复处理。
 - **Step provider 接入**：支持 Step Plan 账号登录和 Step Platform API Key，并可切换当前 Step endpoint 返回的模型。
 - **长任务与多代理**：通过 `/goal` 管理持续目标，通过 `/cron` 定时执行，通过 `/ultracode` 或 `/ultraloop` 启用多代理工作流。
 - **自适应上下文管理**：支持按全局或单模型上下文比例自动压缩，并为较小上下文窗口保留足够的响应空间。
@@ -248,6 +250,8 @@ pnpm run check
 
 启动性能、冷/热缓存和定制参数的可复现测量方法见[性能验证指南](docs/performance.md)；没有实测数据时不声明具体提速百分比。
 
+最新完整复核已覆盖上游 `29eb460`、真实 CLI/bundle/RPC、Linux sandbox 和生产依赖审计。最终云端结果为 coding-agent 5274 项、apps/cli 762 项、Agent Core 560 项、Provider 481 项通过；测试方法、首次波动与覆盖边界见[验证证据](docs/verification.md)。
+
 ## 安全
 
 权限分为 **Ask**、**Approve for Me** 和 **Full Access**，通过 `Shift+Tab` 切换。请审阅工具调用，并选择满足任务需要的最低权限。加载第三方扩展或报告漏洞前，请阅读 [SECURITY.md](SECURITY.md)。
@@ -272,6 +276,7 @@ pnpm audit --prod --audit-level moderate
 - [上游同步指南](docs/upstream-sync.md)：私有开发与上游合并流程
 - [自适应上下文管理](docs/context-management.md)：压缩比例、单模型覆盖与响应空间保护
 - [性能验证指南](docs/performance.md)：可复现的启动、缓存与配置测量
+- [验证证据](docs/verification.md)：上游基线、真实入口、云端测试与覆盖边界
 - [故障排查](docs/troubleshooting.md)：安装、命令、CI、审计和平台限制
 - [开发指南](docs/development.md) · [测试指南](docs/testing.md)
 - [贡献指南](contribute.md) · [安全政策](SECURITY.md)

@@ -56,6 +56,9 @@ Install from the updated lockfile and verify the combined tree:
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run build:offline
 pnpm run check
+node apps/cli/dist/main.js --version
+node packages/coding-agent/dist/bundle/step.js --version
+pnpm run profile:rpc --bundle --runs 1 --isolated-agent-dir --skip-build
 ```
 
 Run focused tests for any behavior touched by the merge. Once the combined tree is verified, publish it only to the private remote:

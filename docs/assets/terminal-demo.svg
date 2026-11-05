@@ -44,7 +44,7 @@
       <tspan x="106" dy="32" fill="#d2a8ff">--continue, -c</tspan><tspan>               Continue previous session</tspan>
       <tspan x="106" dy="32" fill="#d2a8ff">--resume, -r [path|id]</tspan><tspan>       Resume a session directly or open a selector</tspan>
       <tspan x="106" dy="32" fill="#d2a8ff">--model &lt;pattern&gt;</tspan><tspan>            Model pattern or ID</tspan>
-      <tspan x="106" dy="32" fill="#d2a8ff">--plan</tspan><tspan>                       Start in plan mode</tspan>
+      <tspan x="106" dy="32" fill="#d2a8ff">--plan-review-surface</tspan><tspan>  RPC client draws plan proposals and collects the decision</tspan>
     </text>
     <text x="82" y="656" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="14">Selected output from the real `step --help` command · Step Code Custom 0.1.0</text>
   </g>
