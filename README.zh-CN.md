@@ -250,7 +250,7 @@ pnpm run check
 
 启动性能、冷/热缓存和定制参数的可复现测量方法见[性能验证指南](docs/performance.md)；没有实测数据时不声明具体提速百分比。
 
-当前版本为 **0.1.7**，已核对官方发布包、校验和、真实帮助输出及全部发布项；逐项实现与测试见 [0.1.7 同步说明](docs/release-0.1.7.md)。完整复核还覆盖真实 CLI/bundle/RPC、Linux sandbox 和生产依赖审计，最终云端结果为 coding-agent 5274 项、apps/cli 762 项、Agent Core 560 项、Provider 481 项通过；测试方法、首次波动与覆盖边界见[验证证据](docs/verification.md)。
+当前版本为 **0.1.7**，已核对官方发布包、校验和、真实帮助输出及全部发布项；逐项实现与测试见 [0.1.7 同步说明](docs/release-0.1.7.md)。完整复核还覆盖真实 CLI/bundle/RPC、Linux sandbox 和生产依赖审计，最终云端结果为 coding-agent 5275 项、apps/cli 762 项、Agent Core 560 项、Provider 481 项通过；测试方法、首次波动与覆盖边界见[验证证据](docs/verification.md)。
 
 ## 安全
 
