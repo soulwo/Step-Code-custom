@@ -294,6 +294,31 @@ describe("Step tool profile", () => {
 		}
 	});
 
+	it("finds absolute globs after the startup directory has been deleted", async () => {
+		const root = await mkdtemp(join(tmpdir(), "step-tool-profile-"));
+		const startup = join(root, "deleted-startup");
+		const target = join(root, "absolute-target");
+		try {
+			await mkdir(startup, { recursive: true });
+			await mkdir(join(target, "nested"), { recursive: true });
+			await writeFile(join(target, "nested", "hit.ts"), "export default 1;\n");
+			const find = createStepToolProfile(startup).find((tool) => tool.name === "find_files")!;
+			await rm(startup, { recursive: true, force: true });
+
+			const result = await find.execute(
+				"find-deleted-startup",
+				{ pattern: join(target, "**", "*.ts"), max_results: 10 },
+				undefined,
+				undefined,
+				undefined as never,
+			);
+
+			expect(text(result)).toContain(`${target.replaceAll("\\", "/")}/nested/hit.ts`);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
 	it("keeps bracket-prefixed paths in find_files when the search is narrowed", async () => {
 		// A narrowed search returns paths relative to the search root, so a route
 		// directory such as "[id]" lands in the first position of the line — the

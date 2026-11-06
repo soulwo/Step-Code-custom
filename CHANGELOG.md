@@ -1,8 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.7] - 2026-11-05
+
+### Added
+
+- Add `compaction.triggerRatio` for global and per-model automatic-compaction thresholds, with values from 50% through 95%, optional absolute token limits, and earlier triggering on small context windows to preserve response room.
 
 ### Changed
+
+- Stream long Markdown replies incrementally: retain completed paragraphs and memoized code highlighting instead of recomputing the full response on every intermediate frame.
 
 - `AgentLoopConfig.toolCallLeakRetries` is removed. The low-level loop no longer guesses a tool intent from markup in text; it records the structural classification (`classifyIncompleteAssistantTurn()`, now in `@step-harness/providers`) on every finished assistant message as `incomplete`, and hosts decide what to do about it.
 - Plan mode is now entered only by the user, with `/plan` or `--plan`; the `enter_plan_mode` tool is removed. The default system prompt no longer carries a `# Planning` section. Entering plan mode appends one hidden `<collaboration_mode>` block with the plan method and plan path, and leaving it appends a short Default block, so the system prompt and tool block stay byte-identical across a plan cycle. Sessions recorded with an agent-initiated plan still restore. See [plan approval](docs/plan-approval.md#mode-announcements).
@@ -12,6 +18,11 @@
 
 ### Fixed
 
+- Gate plan execution on the user's actual decision and reviewed plan version; cancellation or closure is never approval, and background work cannot bypass the approval barrier.
+- Distinguish command execution outcomes from tool-execution errors, preserving exit codes, timeouts, signals, completed file changes, and `then_run` verification failures independently.
+- Keep the applied diff visible when an edit succeeds but later validation is cancelled or result processing fails.
+- Preserve completed subagent answers across follow-up prompts, failures, and manual stops while reporting the current failure or interrupted state separately.
+- Resolve absolute glob searches from their literal directory prefix even when the process startup directory has been deleted.
 - Recover a normal assistant response that contains neither visible text nor an executable tool call: keep the original message in history unchanged, append one hidden user-role recovery prompt, and continue. Recovery is bounded by a streak of consecutive empty turns. Only a turn with visible text or an executed tool call resets it, and so does any user input, so a long autonomous run is not ended by one transient empty response and a provider error in between does not refill the budget. Automatic compaction runs first when the response also exceeded the context window.
 - A run that ends without a usable answer reports it on `agent_settled` as `failure` (reason and message), instead of rewriting the assistant message's provider stop reason, so a settled run no longer means success by itself. Subagent lanes and goal continuation act on it, and print/JSON pick their exit code from the same classification, so no consumer decides success from `stopReason` alone. `assistantTerminalFailure()` in `@step-harness/providers` applies the same rule to a message that has not settled yet. The hidden recovery message records the entry it answers in `details.recoversEntryId`.
 - Summary requests now use the provider's model output limit and remaining-context sizing instead of fixed compaction/branch caps or reserve-derived budgets. Existing reserve arguments remain accepted for call compatibility; automatic trigger and branch source-selection settings are unchanged.

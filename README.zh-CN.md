@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/soulwo/Step-Code-custom"><img src="https://img.shields.io/badge/repository-private-24292f?logo=github&logoColor=white" alt="私有仓库"></a>
-  <a href="package.json"><img src="https://img.shields.io/badge/version-0.1.0-2563eb" alt="版本 0.1.0"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/version-0.1.7-2563eb" alt="版本 0.1.7"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=node.js&logoColor=white" alt="Node.js 22.19 或更高版本">
   <img src="https://img.shields.io/badge/pnpm-9.15.9-f69220?logo=pnpm&logoColor=white" alt="pnpm 9.15.9">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT 许可"></a>
@@ -53,7 +53,7 @@ Step Code Custom 是基于上游 [stepfun-ai/Step-Code](https://github.com/stepf
   <img src="docs/assets/terminal-demo.svg" alt="Step Code Custom 终端展示真实 step --help 输出的精选内容" width="1000">
 </p>
 
-终端图使用 0.1.0 版本真实 `step --help` 输出的精选内容。在源码目录运行 `pnpm step --help` 可查看完整命令说明。
+终端图使用 0.1.7 版本真实 `step --help` 输出的精选内容。在源码目录运行 `pnpm step --help` 可查看完整命令说明。
 
 ## 项目特性
 
@@ -250,7 +250,7 @@ pnpm run check
 
 启动性能、冷/热缓存和定制参数的可复现测量方法见[性能验证指南](docs/performance.md)；没有实测数据时不声明具体提速百分比。
 
-最新完整复核已覆盖上游 `29eb460`、真实 CLI/bundle/RPC、Linux sandbox 和生产依赖审计。最终云端结果为 coding-agent 5274 项、apps/cli 762 项、Agent Core 560 项、Provider 481 项通过；测试方法、首次波动与覆盖边界见[验证证据](docs/verification.md)。
+当前版本为 **0.1.7**，已核对官方发布包、校验和、真实帮助输出及全部发布项；逐项实现与测试见 [0.1.7 同步说明](docs/release-0.1.7.md)。完整复核还覆盖真实 CLI/bundle/RPC、Linux sandbox 和生产依赖审计，最终云端结果为 coding-agent 5274 项、apps/cli 762 项、Agent Core 560 项、Provider 481 项通过；测试方法、首次波动与覆盖边界见[验证证据](docs/verification.md)。
 
 ## 安全
 
@@ -277,6 +277,7 @@ pnpm audit --prod --audit-level moderate
 - [自适应上下文管理](docs/context-management.md)：压缩比例、单模型覆盖与响应空间保护
 - [性能验证指南](docs/performance.md)：可复现的启动、缓存与配置测量
 - [验证证据](docs/verification.md)：上游基线、真实入口、云端测试与覆盖边界
+- [0.1.7 同步说明](docs/release-0.1.7.md)：官方发布核验与逐项功能对照
 - [故障排查](docs/troubleshooting.md)：安装、命令、CI、审计和平台限制
 - [开发指南](docs/development.md) · [测试指南](docs/testing.md)
 - [贡献指南](contribute.md) · [安全政策](SECURITY.md)

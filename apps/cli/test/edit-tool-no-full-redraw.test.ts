@@ -229,7 +229,11 @@ describe("edit tool TUI rendering", () => {
 		await waitForRender();
 		await waitForRender();
 		// The args-based preview, computed against the file the call already changed.
-		expect(component.render(200).join("\n")).toContain("Could not find");
+		await waitForRenderedText(
+			() => component.render(200).join("\n"),
+			"Could not find",
+			() => tui.requestRender(true),
+		);
 		component.updateResult(
 			{
 				content: [{ type: "text", text: "Successfully replaced 1 occurrence(s) in cancelled-check.txt.\n\nthen_run: $ check\nCommand aborted" }],

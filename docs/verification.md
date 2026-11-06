@@ -4,8 +4,10 @@ This page records the latest verified downstream state. It is a dated snapshot, 
 
 ## Current baseline
 
+- Downstream release: `0.1.7`
 - Downstream merge: `db1e4f2`
 - Upstream baseline: `29eb460` (`recover incomplete assistant turns`)
+- Official release manifest: [`0.1.7`](https://static-openapi.stepfun.com/stepcode/0.1.7/manifest.json) (verified against the official Windows x64 package and SHA256)
 - Branch relationship after the merge: 20 downstream commits ahead, 0 upstream commits behind.
 - Main CI: [run 42007053636](https://github.com/soulwo/Step-Code-custom/actions/runs/42007053636)
 - Production dependency audit: [run 42007179104](https://github.com/soulwo/Step-Code-custom/actions/runs/42007179104)
@@ -36,7 +38,7 @@ pnpm run check
 pnpm run build:offline
 ```
 
-Actual entrypoint checks returned `0.1.0` for the source CLI, `apps/cli/dist/main.js`, and `packages/coding-agent/dist/bundle/step.js`. The standalone bundle also completed `--help` and a real RPC `get_state` request. RPC startup succeeded for both bundled and unbundled Node entrypoints.
+After the 0.1.7 synchronization, entrypoint checks return `0.1.7` for the source CLI, `apps/cli/dist/main.js`, and `packages/coding-agent/dist/bundle/step.js`. The standalone bundle also completes `--help` and a real RPC `get_state` request. See [Step Code 0.1.7 synchronization](release-0.1.7.md) for the official checksum, CLI comparison, and feature-by-feature review.
 
 The terminal illustration is selected from the final bundle's real `--help` output. It includes the current `--plan-review-surface` RPC option rather than an obsolete command sample.
 

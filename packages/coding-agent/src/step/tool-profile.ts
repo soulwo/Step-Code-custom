@@ -653,9 +653,10 @@ function splitAbsolutePattern(pattern: string): { directory: string; pattern: st
 	if (wildcard < 0) {
 		return { directory: path.dirname(pattern), pattern: path.basename(pattern) };
 	}
-	const separator = pattern.lastIndexOf("/", wildcard);
+	const separator = Math.max(pattern.lastIndexOf("/", wildcard), pattern.lastIndexOf("\\", wildcard));
 	if (separator < 0) return undefined;
-	const directory = pattern.slice(0, separator) || path.parse(pattern).root;
+	const root = path.parse(pattern).root;
+	const directory = separator < root.length ? root : pattern.slice(0, separator) || root;
 	return { directory, pattern: pattern.slice(separator + 1) || "*" };
 }
 

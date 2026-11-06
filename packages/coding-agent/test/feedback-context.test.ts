@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { readFeedbackUsername, resolveFeedbackContext } from "../src/step/feedback/context.ts";
+import { STEPCODE_FALLBACK_VERSION } from "../src/step/version.ts";
 
 const roots: string[] = [];
 
@@ -24,9 +25,9 @@ describe("feedback context identity boundaries", () => {
 
 	it("names the build a report came from, including when the version is a fallback", async () => {
 		// A source build reports the fallback version; without `versionSource` a
-		// reader would take "0.1.0" for a release.
+		// reader could mistake that development identity for a tagged release.
 		const context = await resolveFeedbackContext({ storageRootDir: await makeRoot(), env: {} });
-		expect(context.version).toBe("0.1.0");
+		expect(context.version).toBe(STEPCODE_FALLBACK_VERSION);
 		expect(context.versionSource).toBe("fallback");
 		expect(context.channel).toBe("dev");
 		expect(context.runtime?.node).toBe(process.versions.node);

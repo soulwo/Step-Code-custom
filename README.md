@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/soulwo/Step-Code-custom"><img src="https://img.shields.io/badge/repository-private-24292f?logo=github&logoColor=white" alt="Private repository"></a>
-  <a href="package.json"><img src="https://img.shields.io/badge/version-0.1.0-2563eb" alt="Version 0.1.0"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/version-0.1.7-2563eb" alt="Version 0.1.7"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=node.js&logoColor=white" alt="Node.js 22.19 or newer">
   <img src="https://img.shields.io/badge/pnpm-9.15.9-f69220?logo=pnpm&logoColor=white" alt="pnpm 9.15.9">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT license"></a>
@@ -53,7 +53,7 @@ All defaults can be changed in a JSON file selected through `STEPCODE_CUSTOM_CON
   <img src="docs/assets/terminal-demo.svg" alt="Step Code Custom terminal showing selected real step --help output" width="1000">
 </p>
 
-The terminal illustration uses selected output from the real `step --help` command in version 0.1.0. Run `pnpm step --help` from a source checkout to see the complete command reference.
+The terminal illustration uses selected output from the real `step --help` command in version 0.1.7. Run `pnpm step --help` from a source checkout to see the complete command reference.
 
 ## Why Step Code Custom
 
@@ -250,7 +250,7 @@ The full test script isolates user credentials and temporary resources. Some pla
 
 See the [performance verification guide](docs/performance.md) for reproducible startup, cache, and configuration measurements. Do not claim a specific speedup without comparable measurements.
 
-The latest full review covered upstream `29eb460`, real CLI/bundle/RPC entrypoints, Linux sandbox effects, and production dependency auditing. Final cloud totals include 5274 coding-agent, 762 apps/cli, 560 agent-core, and 481 provider tests passing. See [verification evidence](docs/verification.md) for methods, the initial test-attempt fluctuation, and coverage boundaries.
+The current version is **0.1.7**, checked against the official package, checksum, real help output, and every release item; see the [0.1.7 synchronization review](docs/release-0.1.7.md). Full verification also covers real CLI/bundle/RPC entrypoints, Linux sandbox effects, and production dependency auditing. Final cloud totals include 5274 coding-agent, 762 apps/cli, 560 agent-core, and 481 provider tests passing. See [verification evidence](docs/verification.md) for methods, the initial test-attempt fluctuation, and coverage boundaries.
 
 ## Security
 
@@ -277,6 +277,7 @@ For a source installation, close running sessions and remove the cloned reposito
 - [Adaptive context management](docs/context-management.md) — ratios, per-model overrides, and response headroom
 - [Performance verification](docs/performance.md) — reproducible startup, cache, and configuration measurements
 - [Verification evidence](docs/verification.md) — upstream baseline, real entrypoints, cloud tests, and coverage boundaries
+- [Step Code 0.1.7 synchronization](docs/release-0.1.7.md) — official release verification and feature mapping
 - [Troubleshooting](docs/troubleshooting.md) — installation, commands, CI, audits, and platform limitations
 - [Development guide](docs/development.md) · [Testing guide](docs/testing.md)
 - [Contribution guide](contribute.md) · [Security policy](SECURITY.md)
