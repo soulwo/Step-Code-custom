@@ -60,6 +60,7 @@ The terminal illustration uses selected output from the real `step --help` comma
 - **Complete coding loop** — inspect a repository, edit files, execute tools, and verify changes in an interactive TUI or with `step -p` for automation.
 - **Clear execution outcomes** — distinguish command exit, timeout, signal, and output from tool-execution errors; show the applied diff when an edit fails after writing.
 - **Recoverable plans and turns** — persist Plan decisions as session facts and recover interrupted or incomplete assistant turns across supported runtimes.
+- **Background lifecycle control** — own processes by session, inspect them with `/ps` and `/subagents`, configure concurrency and session-bound schedules, and clean up at explicit lifecycle boundaries.
 - **Step provider integration** — sign in with a Step Plan account or use a Step Platform API key, then select among the models returned by the active Step endpoint.
 - **Long-running work** — delegate objectives with `/goal`, schedule work with `/cron`, and opt into multi-agent workflows with `/ultracode` or `/ultraloop`.
 - **Adaptive context management** — compact automatically at configurable global or per-model context ratios, while preserving response room on smaller context windows.
@@ -250,7 +251,7 @@ The full test script isolates user credentials and temporary resources. Some pla
 
 See the [performance verification guide](docs/performance.md) for reproducible startup, cache, and configuration measurements. Do not claim a specific speedup without comparable measurements.
 
-The current version is **0.1.7**, checked against the official package, checksum, real help output, and every release item; see the [0.1.7 synchronization review](docs/release-0.1.7.md). Full verification also covers real CLI/bundle/RPC entrypoints, Linux sandbox effects, and production dependency auditing. Final cloud totals include 5275 coding-agent, 762 apps/cli, 560 agent-core, and 481 provider tests passing. See [verification evidence](docs/verification.md) for methods, the initial test-attempt fluctuation, and coverage boundaries.
+The current version is **0.1.7**, checked against the official package, checksum, real help output, and every release item; see the [0.1.7 synchronization review](docs/release-0.1.7.md). Full verification also covers real CLI/bundle/RPC entrypoints, Linux sandbox effects, and production dependency auditing. The latest background-lifecycle review includes 5342 coding-agent, 762 apps/cli, 560 agent-core, and 484 provider tests passing. See [verification evidence](docs/verification.md) for methods, the initial test-attempt fluctuation, and coverage boundaries.
 
 ## Security
 
