@@ -88,14 +88,19 @@ test("every rpc child is stripped of scheduling authority", () => {
 	vi.stubEnv("STEP_DISABLE_CRON", "");
 	vi.stubEnv("STEP_DISABLE_GOAL", "");
 	vi.stubEnv("STEP_DISABLE_SCHEDULE", "");
-	expect(registeredTools(createStepCronExtension())).toEqual(["cron_create", "cron_delete", "cron_list"]);
+	expect(registeredTools(createStepCronExtension({ allowUpdate: true }))).toEqual([
+		"cron_create",
+		"cron_delete",
+		"cron_list",
+		"cron_update",
+	]);
 	expect(registeredTools(createStepGoalExtension()).length).toBeGreaterThan(0);
 
 	const childEnv = buildSubagentChildEnv(runInput());
 	vi.stubEnv("STEP_DISABLE_CRON", String(childEnv.STEP_DISABLE_CRON));
 	vi.stubEnv("STEP_DISABLE_GOAL", String(childEnv.STEP_DISABLE_GOAL));
 
-	expect(registeredTools(createStepCronExtension())).toEqual([]);
+	expect(registeredTools(createStepCronExtension({ allowUpdate: true }))).toEqual([]);
 	expect(registeredTools(createStepGoalExtension())).toEqual([]);
 });
 
@@ -177,7 +182,12 @@ test("a child that acks the prompt then goes silent settles instead of stranding
 		const result = await session.runTurn(runInput({ turnIdleTimeoutMs: 400 }));
 		expect(result.stopReason).toBe("error");
 		expect(result.errorMessage).toMatch(/produced no output/);
-		session.stop();
+		// `stop` only asks the child to leave (it closes stdin). The fake child intentionally ignores
+		// that, so a test that must not leak a process has to terminate it, exactly as a real host
+		// does when a lane cannot settle on its own.
+		session.terminate();
+		await session.exited;
+		liveSubagentSessions.clear();
 	} finally {
 		process.argv[1] = originalArgv1;
 	}
@@ -203,7 +213,10 @@ test("streaming output keeps resetting the idle budget", async () => {
 		const result = await session.runTurn(runInput({ turnIdleTimeoutMs: 400 }));
 		expect(result.stopReason).toBeUndefined();
 		expect(result.exitCode).toBe(0);
-		session.stop();
+		// Same reason as the idle test: the fake child ignores stdin EOF, so terminate it explicitly.
+		session.terminate();
+		await session.exited;
+		liveSubagentSessions.clear();
 	} finally {
 		process.argv[1] = originalArgv1;
 	}

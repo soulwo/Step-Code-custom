@@ -20,9 +20,11 @@ import type { NewSessionOptions } from "../core/session-manager.ts";
 import { resolveStepAgentDir, resolveStepConfigDir } from "../step/environment.ts";
 import {
 	isValidSubagentBackgroundTimeout,
+	isValidSubagentMaxConcurrency,
 	SUBAGENT_BACKGROUND_TIMEOUT_DEFAULT_SECONDS,
 	SUBAGENT_BACKGROUND_TIMEOUT_MAX_SECONDS,
 	SUBAGENT_BACKGROUND_TIMEOUT_MIN_SECONDS,
+	SUBAGENT_MAX_CONCURRENCY_DEFAULT,
 } from "../step/settings-manager.ts";
 import type { StepTelemetryReporter } from "../step/telemetry.ts";
 import type { StepAgentConfig, StepAgentScope } from "./step-subagent-agents.ts";
@@ -49,7 +51,6 @@ import {
 } from "./subagent/rendering.ts";
 import { createSubagentRpcSession } from "./subagent/rpc-adapter.ts";
 import { buildSubagentToolDescription } from "./subagent/tool-description.ts";
-import { clampWorkflowConcurrency } from "./workflow/budget.ts";
 
 // Lane-notification primitives moved to ./subagent/lane-events.ts; re-exported
 // here to keep this module's public surface stable.
@@ -243,7 +244,11 @@ export interface StepSubagentExtensionOptions {
 	includeBuiltinAgents?: boolean;
 	/** Maximum batch size accepted in one parallel call; excess tasks queue instead of running. */
 	maxParallelTasks?: number;
-	/** Number of child processes allowed to run at once; tasks beyond this stay queued. */
+	/**
+	 * Fallback number of child processes allowed to run at once, used only when
+	 * `[subagent] max_concurrency` is unset; a configured value overrides it.
+	 * Must be a positive integer.
+	 */
 	maxConcurrency?: number;
 	/** Optional isolated git worktree implementation. */
 	worktreeManager?: StepWorktreeManager;
@@ -256,6 +261,13 @@ export interface StepSubagentExtensionOptions {
 	 * `config.toml`), read on every call so a reload takes effect.
 	 */
 	backgroundSettings?: () => StepSubagentBackgroundSettings | undefined;
+	/**
+	 * Host-supplied `[subagent] max_concurrency` (config.toml), read on every
+	 * call so a reload takes effect. The settings boundary validates the value,
+	 * so it is trusted here and overrides both the `maxConcurrency` option and
+	 * the built-in default; it may exceed the default.
+	 */
+	maxConcurrencySettings?: () => StepSubagentConcurrencySettings | undefined;
 }
 
 export interface StepSubagentBackgroundSettings {
@@ -263,6 +275,25 @@ export interface StepSubagentBackgroundSettings {
 	enabled?: boolean;
 	/** Default per-turn wall-clock limit for background lanes, in seconds. */
 	timeoutSeconds?: number;
+}
+
+export interface StepSubagentConcurrencySettings {
+	/** Default number of child processes a parallel batch runs at once. */
+	maxConcurrency?: number;
+}
+
+/**
+ * Resolve the parallel-batch ceiling: a validated configured value, then a
+ * validated host option, then the default. There is deliberately no CPU- or
+ * provider-derived ceiling — a child waits on a remote model, not on a local
+ * core — but an invalid value must never reach the shared admission window,
+ * where a non-positive or non-finite capacity wedges the process-wide pool
+ * instead of failing one batch.
+ */
+export function resolveSubagentConcurrency(configured?: number, option?: number): number {
+	if (isValidSubagentMaxConcurrency(configured)) return configured;
+	if (isValidSubagentMaxConcurrency(option)) return option;
+	return SUBAGENT_MAX_CONCURRENCY_DEFAULT;
 }
 
 // Keep the model-facing contract identical to Pi's subagent example. Step
@@ -680,11 +711,13 @@ function prependNotice(
  * Show a live lane list under the editor for the duration of a blocking
  * subagent call.
  *
- * Background lanes already have their own `aboveEditor` widget; the blocking
- * path had none, so a parallel run's only surface was the transcript tool row,
- * which the generic collapsed shell truncates. One component instance is reused
- * across updates: `setExtensionWidget` disposes the component it replaces, so
- * the instance deliberately has no `dispose` and the factory returns it again.
+ * Only the blocking path draws this: it is the turn's own output, it ends with
+ * the turn, and there is nothing left to ask about afterwards. Background lanes
+ * are read through `/subagents` instead, so they add no surface while they run.
+ * A parallel run's only other surface is the transcript tool row, which the
+ * generic collapsed shell truncates. One component instance is reused across
+ * updates: `setExtensionWidget` disposes the component it replaces, so the
+ * instance deliberately has no `dispose` and the factory returns it again.
  */
 async function withSubagentListWidget(
 	toolCallId: string,
@@ -737,20 +770,25 @@ async function withSubagentListWidget(
 
 /** Construct the hidden inline extension used by the Step launcher. */
 export function createStepSubagentExtension(options: StepSubagentExtensionOptions = {}): ExtensionFactory {
+	// The configured setting is validated where it is read; a host option is a
+	// programming error, so reject it here while the caller can still see it.
+	if (options.maxConcurrency !== undefined && !isValidSubagentMaxConcurrency(options.maxConcurrency)) {
+		throw new Error(
+			`Invalid Step subagent maxConcurrency option: ${String(options.maxConcurrency)} (expected a positive integer)`,
+		);
+	}
 	const resolved = {
 		agentDir: path.resolve(options.agentDir ?? resolveStepAgentDir()),
 		configDirName: options.configDirName?.trim() || resolveStepConfigDir() || CONFIG_DIR_NAME,
 		includeBuiltinAgents: options.includeBuiltinAgents !== false,
 		maxParallelTasks: Math.max(1, Math.min(MAX_PARALLEL_TASKS, options.maxParallelTasks ?? MAX_PARALLEL_TASKS)),
-		maxConcurrency: Math.max(
-			1,
-			Math.min(clampWorkflowConcurrency(options.maxConcurrency), options.maxParallelTasks ?? MAX_PARALLEL_TASKS),
-		),
+		maxConcurrency: resolveSubagentConcurrency(undefined, options.maxConcurrency),
 		telemetry: options.telemetry,
 		worktreeManager: options.worktreeManager ?? {
 			allocate: allocateStepWorktree,
 		},
 		runner: options.runner ?? runStepSubagentProcess,
+		maxConcurrencySettings: options.maxConcurrencySettings,
 	};
 	return (pi: ExtensionAPI): void => {
 		// The child process inherits this marker. It still gets Step's provider and
@@ -758,91 +796,20 @@ export function createStepSubagentExtension(options: StepSubagentExtensionOption
 		if (process.env[CHILD_MARKER] === "1") return;
 
 		const lanes = new Map<string, BackgroundAgentLane>();
-		// Every background lane shares one list widget, built the same way as the
-		// blocking call's list: a row per task with a fixed title and metrics. A
-		// widget per lane, republished on every streamed delta with the child's
-		// live text, reordered the lanes on each publish (the host re-inserts the
-		// key) and changed height as lines wrapped, so the block flickered.
+		// Background lanes are not drawn under the editor. A panel that sits above the editor for as
+		// long as a lane runs competes with the conversation, and its rows cannot show what a user
+		// actually wants next — which step each child is on. `/subagents` answers that on demand; the
+		// lane snapshots it reads are published by the lifecycle (`publishLaneSnapshot`), so nothing
+		// here needs to observe lanes for display.
 		//
-		// Lanes stay listed until the whole batch settles, so the header reads
-		// "2/4 complete" rather than shrinking as lanes finish; then it clears and
-		// the transcript's agent-notification entries take over.
-		//
-		// Elapsed is read from the clock at render time. A blocking call gets its
-		// redraws from the working indicator, but background lanes usually run
-		// while the parent sits idle, so a 1s tick keeps the column moving; the
-		// differential renderer only rewrites the cells that changed.
-		const lanesWidgetKey = "step-agent-lanes";
-		const shownLanes = new Set<string>();
-		let lanesWidget: SubagentListWidget | undefined;
-		let lanesPublished: string | undefined;
-		let lanesTicker: ReturnType<typeof setInterval> | undefined;
-		const stopLanesTicker = (): void => {
-			if (lanesTicker) clearInterval(lanesTicker);
-			lanesTicker = undefined;
+		// A blocking `subagent` call still renders its list inline: it is the turn's own output, it
+		// ends with the turn, and there is nothing to ask about afterwards.
+		const updateLaneWidget = (_lane: BackgroundAgentLane): void => {
+			// Retained as the lifecycle host hook: lane snapshots are published there, and a
+			// replacement host that wants a live view has somewhere to put it.
 		};
-		const updateLaneWidget = (lane: BackgroundAgentLane): void => {
-			if (!lane.ctx.hasUI) return;
-			shownLanes.add(lane.id);
-			// `lanes` iterates in creation order; `shownLanes` in first-update order,
-			// which depends on which child streams first and would shuffle the rows.
-			const batch = [...lanes.values()].filter((entry) => shownLanes.has(entry.id));
-			try {
-				if (batch.every((entry) => entry.status !== "running")) {
-					shownLanes.clear();
-					stopLanesTicker();
-					lanesWidget = undefined;
-					lanesPublished = undefined;
-					lane.ctx.ui.setWidget(lanesWidgetKey, undefined);
-					return;
-				}
-				// Each lane's frame is byte-bounded, so its omitted count must be
-				// summed too: otherwise a two-lane batch under-reports its total.
-				const omitted = batch.reduce((sum, entry) => sum + (entry.details.omittedResults ?? 0), 0);
-				const details: StepSubagentDetails = {
-					...lane.details,
-					mode: "parallel",
-					results: batch.flatMap((entry) => entry.details.results),
-					...(omitted > 0 ? { omittedResults: omitted } : {}),
-				};
-				lanesWidget?.setDetails(details);
-				const signature = subagentListSignature(details);
-				if (signature === lanesPublished) return;
-				lanesPublished = signature;
-				lane.ctx.ui.setWidget(
-					lanesWidgetKey,
-					(tui, theme) => {
-						lanesWidget ??= new SubagentListWidget(details, theme, "background agents");
-						if (!lanesTicker) {
-							lanesTicker = setInterval(() => tui.requestRender(), 1_000);
-							lanesTicker.unref?.();
-						}
-						return lanesWidget;
-					},
-					{ placement: "aboveEditor" },
-				);
-			} catch {
-				// A host may tear down its UI while a detached child is finishing.
-			}
-		};
-		let widgetCtx: ExtensionContext | undefined;
 		const clearLaneWidget = (): void => {
-			shownLanes.clear();
-			stopLanesTicker();
-			lanesWidget = undefined;
-			lanesPublished = undefined;
-			const ctx = widgetCtx;
-			widgetCtx = undefined;
-			if (!ctx?.hasUI) return;
-			try {
-				ctx.ui.setWidget(lanesWidgetKey, undefined);
-			} catch {
-				// The host may already have torn its UI down during shutdown.
-			}
-		};
-		const trackedUpdateLaneWidget = (lane: BackgroundAgentLane): void => {
-			if (lane.ctx.hasUI) widgetCtx = lane.ctx;
-			updateLaneWidget(lane);
+			// Nothing to clear: this host draws no lane surface.
 		};
 		const lifecycle = createLaneLifecycle({
 			pi,
@@ -851,7 +818,7 @@ export function createStepSubagentExtension(options: StepSubagentExtensionOption
 			run: (prepared, signal, onUpdate, ctx, laneRuntime) =>
 				runPreparedSubagent(prepared, signal, onUpdate, ctx, resolved, laneRuntime),
 			outputDirectory: (ctx) => path.join(ctx.sessionManager?.getSessionDir?.() || resolved.agentDir, "tool-output"),
-			updateLaneWidget: trackedUpdateLaneWidget,
+			updateLaneWidget,
 			clearLaneWidget,
 		});
 

@@ -257,7 +257,8 @@ Lanes belong to the session runtime that started them. `session_shutdown`
 (quit, signals, `/new`, `/resume`, `/fork`, and reload) aborts every lane of that
 runtime, stops its children, and waits up to three seconds. Children still
 running after that are killed, and their temporary directories are removed.
-The lane list and widget are cleared, and results that arrive later are dropped.
+The lane list and widget are cleared, and results that arrive later are dropped. Background lanes
+draw no widget above the editor: `/subagents` reads their live state on demand.
 Lanes are not persisted or resumed. Lane children are also registered for the
 host's process-exit sweep. Shutting down one runtime never touches another
 runtime's lanes. A host that keeps several sessions open, such as a web client,
@@ -273,6 +274,82 @@ the foreground. Its result starts with `Background execution is not available in
 this run mode; ran in the foreground.`. `STEP_DISABLE_SUBAGENT_BACKGROUND=1` or
 `[subagent] background = false` does the same everywhere, with a matching
 notice.
+
+## Background commands and process ownership
+
+`run_command` with `run_in_background: true` starts a detached process tree for
+long-lived work such as a dev server. The tree is registered in the process
+registry under the calling session, with `kind: "bash"`.
+
+Kind decides whether a tree counts as unfinished work. `subagent` and
+`workflow` are the session's own work, so they count. `bash` is a side effect
+the user inspects afterwards: a session with a running dev server is still a
+finished session, and its row does not read as busy.
+
+Ownership decides when the tree stops:
+
+| Event | Background command |
+| --- | --- |
+| Switching which session is viewed | keeps running |
+| Forking a session | keeps running; the new session starts with none of them |
+| Starting a new session, or resuming another one | keeps running |
+| Reloading settings or extensions | keeps running |
+| The owning session is deleted | stopped |
+| The host exits | stopped |
+
+Stopping goes through three layers, from narrowest to widest:
+
+1. `releaseOwnerGracefully(ownerId)` sends `SIGTERM` to the tree's process
+   group, then `SIGKILL` after `PROCESS_TREE_TERM_GRACE_MS` (3s). The owning
+   session calls it from its `session_shutdown` handler. A command the user
+   interrupted uses the shorter `INTERRUPTED_COMMAND_GRACE_MS` (500ms) instead:
+   an Escape or an elapsed deadline must look stopped immediately, and the call
+   still waits for the tree to exit.
+2. `releaseAllProcessesSync()` runs from a `process.exit` listener registered
+   inside the registry module. Every host inherits it, including hosts that do
+   not write their own shutdown path.
+3. A detached parent-death supervisor holds one IPC lease per armed group.
+   When the channel closes — including when the host is `SIGKILL`ed — the
+   supervisor signals the group. No in-process handler can cover that case.
+   Every command arms it, foreground or background: both are spawned detached,
+   so both would otherwise outlive a killed host. The supervisor is one process
+   per host, so a foreground command costs a lease, not a process.
+
+The registry also decides what the model and the UI can see. `bash_list` returns
+the calling session's own commands with pid, status, and log path; `bash_kill`
+stops one or all of them and refuses pids owned by another session. A fork
+therefore starts with an empty list even though the parent's commands keep
+running.
+
+Log files survive their command: they are the only record of what a dev server
+printed before it was stopped, so the registry keeps the `logPath` and does not
+delete it.
+
+### When a command is released
+
+`session_shutdown` fires for five reasons, and only `quit` ends the session.
+`new`, `resume` and `fork` replace the runtime while the old conversation stays
+on disk — and, in a multi-session host, on screen — and `reload` keeps the same
+session object. Releasing on those would stop a dev server the user is still
+watching, so the release is gated on `reason === "quit"`, which covers a host
+that is exiting and a session that is deleted. A host killed outright is covered
+by the `process.exit` sweep.
+
+### Reading them from a terminal
+
+`/ps` lists this session's background commands with pid, state, elapsed time and
+log path, and stops one or all of them. `/subagents` lists the running subagent
+lanes with the step each child is on. Both print into the transcript and fold
+when long. Both are terminal commands. A graphical host is expected to project
+this state itself, where it can stay live instead of being a snapshot; the
+concrete reason the commands refuse elsewhere is that the `notify` they depend on
+is a no-op in an RPC host, so they would appear to do nothing.
+
+Background lanes draw no widget above the editor. A permanent panel competes
+with the conversation for as long as a lane runs, and its rows cannot show which
+step a child is on — the question a user actually has. Progress notifications to
+the model stay out of the transcript for the same reason; completion and
+needs-input still display.
 
 ## Cron scheduling and delivery
 
