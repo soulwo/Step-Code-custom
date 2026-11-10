@@ -7,11 +7,12 @@ This page records the latest verified downstream state. It is a dated snapshot, 
 - Downstream release: `0.1.7`
 - Release synchronization: `037090e`
 - Lifecycle merge: `f386099`
-- Upstream baseline: `c1e9e29` (background process ownership, session schedules, `/ps`, `/subagents`, and concurrency settings)
+- Git runtime-context merge: `99d7eb0`
+- Upstream baseline: `372f1f6` (live Git branch context outside the cached system prompt)
 - Official release manifest: [`0.1.7`](https://static-openapi.stepfun.com/stepcode/0.1.7/manifest.json) (verified against the official Windows x64 package and SHA256)
-- Branch relationship after the merge: 24 downstream commits ahead, 0 upstream commits behind.
-- Main CI: [run 42573793593](https://github.com/soulwo/Step-Code-custom/actions/runs/42573793593)
-- Production dependency audit: [run 42573918301](https://github.com/soulwo/Step-Code-custom/actions/runs/42573918301)
+- Branch relationship after the merge: 26 downstream commits ahead, 0 upstream commits behind.
+- Main CI: [run 42737188925](https://github.com/soulwo/Step-Code-custom/actions/runs/42737188925)
+- Production dependency audit: [run 42737243669](https://github.com/soulwo/Step-Code-custom/actions/runs/42737243669)
 
 ## Upstream behavior reviewed
 
@@ -24,6 +25,8 @@ This page records the latest verified downstream state. It is a dated snapshot, 
 - Scheduled tasks are session-bound with one-shot and interval schedules; `/ps` and `/subagents` expose session-scoped inspection and control.
 - Subagent concurrency has an explicit default and setting, with workflow admission and rate-limit sharing preserved.
 - Unfinished Responses tool calls fail closed instead of reaching execution.
+- Git branch state stays out of the cached system prompt; a changed branch is injected as hidden runtime context, including mid-run and prompt-less continuations.
+- `createStepRuntimeContextExtension` is exported for SDK embedders that build the system appendix without the capabilities extension.
 
 ## Custom behavior rechecked
 
@@ -56,13 +59,13 @@ A separate Windows process-registry smoke started two owned trees, released one 
 | custom | 6 passed |
 | providers | 484 passed, 6 skipped |
 | agent-core | 560 passed, 1 skipped |
-| coding-agent | 5342 passed, 55 skipped |
+| coding-agent | 5352 passed, 55 skipped |
 | apps/cli | 762 passed |
 | Standalone bundle smoke | Passed |
 | Linux sandbox smoke | Passed: allowed write, denied write, and denied network |
 | Production `npm audit` | Passed |
 
-An earlier upstream-merge Test attempt had one asynchronous edit-render assertion and one 30-second runtime-context timeout; its rerun passed. The edit scenario now uses the existing bounded text wait. Both the 0.1.7 run `42152905961` and the lifecycle run `42573793593` passed their initial complete Test attempts. These records distinguish load-sensitive test behavior from current release evidence.
+An earlier upstream-merge Test attempt had one asynchronous edit-render assertion and one 30-second runtime-context timeout; its rerun passed. The edit scenario now uses the existing bounded text wait. The 0.1.7 run `42152905961`, lifecycle run `42573793593`, and Git runtime-context run `42737188925` passed their initial complete Test attempts. These records distinguish load-sensitive test behavior from current release evidence.
 
 ## Boundaries
 
